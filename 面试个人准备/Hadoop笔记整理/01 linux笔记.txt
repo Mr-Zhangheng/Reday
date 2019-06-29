@@ -1,0 +1,1831 @@
+第一天:
+linux介绍
+免费的，开源的类UNIX的操作系统
+
+主要特性：
+基本思想：一切都是文件，每个软件都有固定的用途
+完全免费：
+完全兼容POSIX1.0标准
+多用户，多任务
+良好的界面
+支持多种平台：掌上电脑，机顶盒，服务器，PC机等等都可以使用
+
+目录结构
+/ 根目录，所有目录都是从根目录开始
+boot:系统启动、引导和内核目录，一般是系统启动的相关信息
+dev:设备目录，存放各种硬件设备信息。比如磁盘，光盘
+etc: 系统级别的配置文件
+home:普通用户的家目录
+lib/lib64：存放的系统使用的函数的目录
+lost + found :在ext2\ext3文件系统中，系统崩溃时的消息记录到该目录下
+mnt:挂载目录
+opt:给主机额外安装软件的地方
+root：root用户的家目录
+proc:重要的，需要加载到内存中的信息
+bin:二进制文件目录，可执行的二进制文件，包含root用户和普通用户执行的linux的命令
+sbin:供root用户使用的命令
+tmp:临时目录，临时的数据存放位置，重要的数据不能存储在这里
+usr:用户共享目录
+var:存放的是系统运行时需要改变的数据
+
+linux的基础命令
+
+帮助命令，查看命令的具体使用方法
+man + COMMAND 按q退出
+COMMAND + -help 或者 --help
+info + COMMAND  按q退出
+
+pwd 打印当前工作目录（全目录，从根目录开始）
+
+【root@localhost Desktop】 用户名@主机名 当前目录的最后一级目录
+
+/root/Desktop :绝对路径
+
+/home/hadoop/data
+
+绝对路径：以根目录为开始的目录  
+相对路径：相对当前目录的位置 a/b/c
+
+cd : 切换工作目录命令
+
+cd ~ :回到家目录
+cd 不使用任何参数：回到用户家目录
+cd -:回到上次所在的目录位置
+../ ：代表上一级目录
+./ :代表当前目录（可以省略）
+
+cd ../root/Desktop 当前位置在/bin,切换到/root/Desktop,使用相对路径
+
+COMMAND + 【选项】 + 【参数】
+选项可以组合（前提是组合不冲突）
+
+ls 查看目录 
+-a:显示所有，不忽略隐藏文件
+ls -a  /
+
+-l：以列表的形式显示
+ls -l /
+ls -al /
+如果不指定要查看的目录，默认就是当前目录
+
+cat 查看文件内容(将所有数据一次性加载出来) cat + 选项 + 文件名
+
+tab键：自动补全命令或目录或文件
+ifconfig（查看网卡信息）：输入ifco，按tab键自动补全这个命令
+cd /root/Desktop :可以自动补全目录
+cat /etc/profile : cat /etc/prof 按tab键自动补全文件名
+
+1、在某个目录下如果只有一个目录或文件的时候，可以不用输入首字母，tab键就可以自动补全
+2、如果有用户输入，tab键能唯一匹配时就会自动补全，如果有多个匹配目录，按tab就会列出所有的
+符合条件的
+3、双击tab,显示所有匹配的命令或者文件
+
+cat /etc/sysconfig/network-scripts/ifcfg-eth0
+
+cat /etc/passwd
+
+快捷命令：
+ctrl + l 清屏，相当于clear
+ctrl + r 查找输入过的历史命令，可以根据用户输入的字符串匹配历史命令，将最近的一条符合条件的返回
+上下方向键，查看输入过的历史命令
+
+查看系统版本信息
+uname 
+-a 显示系统版本所有信息
+-r 显示内核的版本
+-n 显示主机名称
+
+cat /etc/issue
+
+
+hostname ：查看或临时修改主机名
+hostname
+
+hostname xiaoqiang(临时修改主机名)
+如果想要永久修改需要修改文件
+
+ifconfig：查看网卡信息
+ifconfig eth0(默认的网卡名称) 192.168.91.33
+
+date 查看系统时间(重点掌握)
+date 
+date +%Y-%m-%d
+date +"%Y-%m-%d %H:%M:%S"
+date -d "1 days ago" +%Y-%m-%d
+
+date -d "10 days ago 2019-3-21" +%Y-%m-%d :2019-3-21前10天的日期
+
+date -d "10 weeks  2019-3-21" +%Y-%m-%d ：2019-3-21后10周的日期
+
+date -s "2019-4-1 09:00:00"  设置时间
+
+
+hwclock -w 将系统时间写入硬件
+
+tzselect 时区的选择，需要自己手动更改配置文件
+
+ps 查看进程（类似于windows的任务管理器）
+ps -e(所有)f(full 全格式) 
+
+ps -a(all)u(user)x(无控制终端)
+
+kill -9 + pid(进程ID) 杀死当前进程  （重点掌握）
+
+ping 0.0.0.0
+再开另一终端 ps -ef  查看进程ID，然后使用kill -9 将进程杀死
+或者在当前终端下ctrl + c 强制终止
+
+ctrl + c 强制终止
+ctrl + z 后台挂起
+
+jobs : 显示linux系统中任务列表及任务状态，包括后台的运行的任务
+
+fg + jobID 调到前台执行
+
+bg + jobID 后台执行
+
+ping 0.0.0.0 & （& 表示后台启动进程）
+
+pstree 以树状的方式显示进程之间的关系
+
+grep 过滤，文本的搜索工具
+
+grep + 选项 + 参数（要搜索的字符串） + 参数（文件名）
+
+-i 忽略大小写
+-n  打印行号
+-v  反向选择（即查找不匹配的行）
+--color 突出显示查找的字符串
+
+cat /etc/passwd
+
+grep -i root /etc/passwd
+
+grep -i -n root /etc/passwd
+
+grep -i -n --color root /etc/passwd
+
+grep -v root /etc/passwd
+
+管道 | 将前一个命令处理的结果交给后一个命令
+
+ps -ef | grep -n --color root 
+
+top 实时的显示系统运行状态，可以理解成监控工具
+
+free 显示系统内存的使用情况，包括物理内存，交换内存（swap）和内核的缓冲区内存
+
+关机
+shutdown -h now 立即关机
+shutdown -h +10 10分钟后关机
+shutdown -h 12:00  12点关机
+
+halt   
+init 0  
+
+重新启动
+shutdown -r now 立即重启
+reboot 
+init 6 
+
+init 3 命令行界面
+init 5 图形化界面
+
+cat /etc/inittab
+
+who 有谁登陆了服务器
+last 最近的登录历史
+last -n 最近登录的n条记录
+
+三、文件和目录的操作(重点掌握)
+1、创建目录
+mkdir + 目录名（如果不指定路径，默认在当前路径下创建）
+mkdir /data :在根目录下创建一个名为data的目录
+mkdir data  ：在当前目录下创建一个名为data的目录 
+
+可以一次性创建多个目录
+mkdir /root/data/a /data/b
+
+创建多级目录
+mkdir -p /test/test1/test2/test3
+
+mkdir -p /test/test1/test2/test3 test/test1/test2  data1
+
+文件的创建
+touch + 文件名 （如果不指定路径，默认在当前路径下创建）可以同时创建多个，是创建空文件
+touch 1.TXT 2.TXT
+
+echo 标准输出
+echo + 字符串 :直接打印到屏幕
+echo + 字符串 > 1.txt  :覆盖写入，如果1.txt这个文件不存在，会先创建出来，然后再将数据写入
+echo + 字符串 >> 4.txt  :追加写入，如果4.txt这个文件不存在，会先创建出来，然后再将数据写入
+
+不通过交互信息修改密码
+echo root(新密码) | passwd -stdin root(修改密码的用户)
+
+重定向输出
+> 先清空文件内容，写入新的内容
+>> 追加新的内容，原有内容不会被清空
+还可以将一个命令的输出结果写入文件中
+ls -R -l /test > 1.txt 
+cat 1.txt
+ls -R -l /test1 >> 1.txt 
+cat 1.txt
+
+< 输入重定向(相当于导入)
+cat >1.TXT</etc/profile（把/etc/profile文件中内容导入1.txt中）
+
+<<EOF 输入结束（EOF可以替换成其他的，end of file）
+区分大小写
+
+cat > 1.txt 从标准输出中获取内容写入到文件中
+ctrl + d 终止文件输入
+
+cat >> /etc/profile <<EOF
+export JAVA_HOME=/data/jdk1.8
+export PATH=$PATH:$JAVA_HOME/bin:
+EOF
+
+cat<<EOF>1.txt(也可以这样写)
+
+3、文件或目录的拷贝
+cp 
+cp + 文件名 + 路径
+仅拷贝文件
+cp /etc/profile /test :将/etc/profile文件拷贝到/test目录下，拷贝过来文件名字还是profile
+ll /test
+注：ll 是ls -l的简写
+
+拷贝并改名字
+cp /etc/profile /test/profile.bak :将/etc/profile文件拷贝到/test目录下并改名字为profile.bak
+同时拷贝多个文件
+cp /etc/passwd /etc/profile  /data：将/etc/passwd /etc/profile文件拷贝到/data目录下
+
+拷贝目录
+cp -r 路径/待拷贝的目录  + 新的位置
+可以将一个目录拷贝到另一个位置
+cp -r /test ./
+
+可以拷贝并改名字
+cp -r /test ./test.bak
+
+可以同时拷贝多个目录
+cp -r /test /data /root :将/test /data拷贝到/root下
+
+4、移动文件（相当于剪切）
+仅移动目录或文件
+mv + 目录名或文件名 + 新的位置
+mv /root/Desktop/test /data
+
+移动并改名
+mv + 目录名或文件名 + 新的位置+新的目录或者文件名字
+mv /data/test ./test1
+
+总结：这个命令不仅可以移动目录还可以移动文件，支持移动的同时改名字
+还支持同时移动多个文件或者多个目录
+
+5、删除文件或目录
+rm -rf /test
+r recursive(递归)
+f force（强制）
+
+6、文件的改名
+rename 
+rename + 要修改的字符串 + 修改后的字符串 + 匹配的文件
+
+假如当前目录下有如下4个文件，现要将.txt文件的后缀改为.avi
+1.txt
+2.txt
+text
+profile
+
+rename .txt .avi ./*.txt
+
+rename .avi '' ./*.avi
+
+
+第二天:
+一、文件的编辑
+vi和vim
+vi + 文件名（包含路径，如果不指定就是当前路径下的文件，如果文件不存在就会打开一个新的）
+
+vi /etc/profile1
+
+一般模式
+dd:删除光标所在行
+ndd:删除以光标所在行开始后的n行
+dG:从光标所在处删除到文件末尾
+u:取消上一步操作
+x:删除光标所在处字符
+nx:删除n个字符，从光标所在处开始
+D：从光标所在数删除到改行的行尾
+r:替换一个字符
+R:从光标所在处开始替换，根本停不下来，按ESC结束
+ctrl+r:返回到取消前
+yy：复制一行
+nyy：复制n行，从光标所在行开始
+p:粘贴
+gg:定位到首行
+G：定位到行尾
+ngg:定位到n行
+
+编辑模式，按esc退出编辑模式
+i:光标前输入
+I：光标所在行行首
+a：光标后
+A：光标所在行行尾
+o：下一行
+O：上一行
+
+底行模式（一般模式下shift+:进入底行模式）
+w 保存
+q 退出
+wq 保存并退出
+！强制
+q! 强制退出（不保存）
+wq! 强制保存退出
+
+在一般模式下
+查找
+/ + 要查找的字符串： 会从光标所在处开始查找，并定位到第一个查找到的位置，
+n定位到下一个，N定位到上一个
+
+查找并替换
+:s/sbin/gp1919 查找光标所在行的第一个sbin,并替换为gp1919
+:s/root/gp1919/g 查找光标所在行的所有root,并替换为gp1919
+:%s/sbin/gp1919/g 查找文件中的sbin并替换为gp1919
+:10,$s/gp1919/sbin/g 从第十行开始替换，替换到文件末尾
+：pwd 不退出文件编辑，显示当前所在的工作目录的方法
+：cd 不退出文件编辑查看某一个路径
+：set nu 设置行号
+：set nonu 取消行号
+：n 定位到n行
+
+选择模式
+按v进入选择模式
+shift + v 行选择模式
+ctrl + v 块选择模式
+y 复制
+p 粘贴
+
+
+文件的查看
+cat 一次性将文件中所有内容打印到控制台
+head 默认取前10行 head -n 取前n行
+tail 默认取后10行 tail -n 取出后n行
+tail -n +10 + 文件名：输出第十行到文件末尾
+tail -f ：监控的是文件的inode号，inode号是文件的唯一标识，如果文件改名，移动inode号不改变
+但是一旦文件改名或者移动，tail -f 监控不到文件变化
+tail -F ：监控的是文件名字，无论文件存在与否都能监控
+log
+log1
+log2
+log3
+
+tail -f 监控软件启动时的日志信息
+tail -300 /hadoop-root.log
+
+more :分页查看文件，适合文件内容较多的
+按空格翻页
+按回车逐行查看
+按b回看
+按q退出
+
+less :分页查看文件，适合文件内容较多的，支持上下翻页
+按空格翻页
+按回车逐行查看
+按b回看
+按q退出
+可以支持关键字的搜索 
+
+文件的查找
+which command
+用于查找并显示命令的绝对路径。从环境变量中查找的
+
+whereis:该命令会在特定的目录中查找，这些文件属于原始代码、二进制文件、或是帮助文件
+一般用于查找软件的安装位置
+
+locate:查找文件所在，在数据库中查找的，查找速度很快，但是有弊端，linux中的文件数据库不是实时更新的
+新建的文件可能找不到
+如果想找到的话，需要更新数据库：updatedb
+locate cls.avi
+updatedb
+locate cls.avi
+
+find命令（慎用）
+从目录中查找，查找速度很慢，参数前路径可以指定多个，表示从多个路径下查找
+find / -name ".avi" 
+
+查找并删除文件，有人机交互界面
+find ./ -name "*.txt" -ok rm {} \;
+查找并自动删除，没有人机交互界面
+find ./ -name "*.avi" -exec rm {} \;
+
+history:显示历史命令
+
+文件的压缩
+1、gzip:
+用来压缩文件。以".gz"为文件的扩展名，可以压缩较大的文件，节省磁盘空间，可以与tar命令组合使用
+构成linux操作系统中的比较流行的压缩格式
+1、压缩时不保留原文件
+2、不能压缩目录
+3、解压缩命令gunzip
+4、可以同时压缩多个
+5、可以同时解压缩多个
+
+bzip2 。扩展名 .bz2
+1、压缩时不保留原文件
+2、不能压缩目录
+3、解压缩命令bunzip2
+4、可以同时压缩多个
+5、可以同时解压缩多个
+
+tar 打包
+可以将多个文件或目录放在一起
+-c 打包
+-v 显示文件进程
+-f 必须要有，后面跟要打包或者解包的文件
+-x 解包
+-C 重定向输出解包后的文件
+-j 以bzip2的形式压缩或者解压缩
+-z 以gzip的形式压缩或者解压缩
+
+打包
+tar -cvf test.tar profile passwd.bak
+
+解包
+tar -xvf test.tar -C ./data
+
+打包并压缩
+tar -zcvf test.tar.gz file1 file2 directory1 
+解包并解压缩重定向输出
+tar -zxvf test.tar.gz -C ./test007
+
+用户和组的操作
+添加用户 
+useradd + 用户名 
+cat /etc/passwd 查看用户的账号信息
+
+0为root用户的id
+0-499系统用的id
+500及以上普通用户id
+cat /etc/shadow
+
+userdel xiaohong  删除用户xiaohong,该用户的家目录仍然存在
+useradd xiaohei 
+userdel -r xiaohei 删除用户xiaohei,并且删除该用户的家目录
+
+useradd xiaocang
+passwd xiaocang
+
+groupadd xiaoze
+cat /etc/group
+groupdel xiaoze(可以)
+groupdel xiaocang(不可以)组里面有用户，无法删除
+
+文件的权限
+权限：读、写、执行
+归属关系：拥有者、所属组、其他用户
+‐|rw‐|‐‐‐|‐‐‐. 1 root root 1771 4月28 2015 anaconda‐ks.cfg
+①  ②    ③    ④        ⑤   ⑥   ⑦      ⑧            ⑨
+
+①：文件类型
+‐ 文件
+d 目录
+l 链接
+②：所有者权限（u）
+r 读 4
+w 写 2
+x 执行 1
+③：所属组权限（g）
+r 读 4
+w 写 2
+x 执行 1
+④：其他用户权限（o）
+r 读 4
+w 写 2
+x 执行 1
+⑤：所有者
+⑥：所属组
+⑦：文件大小
+⑧：最后修改时间
+⑨：文件名
+
+修改文件权限
+chmod 765 ./profile
+
+递归修改文件权限
+chmod -R 700 ./data
+
+chmod g+w -R ./data
+
+chmod ug-rx ./data
+
+修改文件的所有者和所属组
+chown xiaocang:root ./data
+
+chown -R xiaocang:root ./data(递归修改)
+
+切换用户 
+su + 用户名
+
+
+权限配置
+通过权限配置可以给普通用户赋予一些root用才可以使用的权利，但是使用时必须加上"sudo"
+sudo vi /etc/profile
+
+
+## Allow root to run any commands anywhere
+root    ALL=(ALL)       ALL
+xiaocang ALL=(ALL)       ALL
+
+## Same thing without a password
+# %wheel        ALL=(ALL)       NOPASSWD: ALL
+xiaocang        ALL=(ALL)       NOPASSWD: ALL
+
+
+磁盘和U盘的操作
+du -sh  显示目录使用的磁盘大小
+
+df 命令 显示磁盘分区的使用情况
+df -h 
+
+mkfs 格式化磁盘（试用）
+mkfs.ext4 /dev/sda1 格式化磁盘分区
+
+fdsik 用于查看磁盘的实体的使用情况，这个命令也可以用于对磁盘进行分区
+fdisk -l 显示磁盘分区列表
+
+磁盘分区
+fdisk /dev/sda
+
+挂载命令
+mount [-t 文件系统的类型] [-o 挂载方式] 设备  挂载点
+
+-t 文件系统格式（多数情况下不用指定，mount命令会自动选择）
+nfs,ntfs,vfat.....
+
+-o 挂载方式
+loop :把一个文件当成磁盘分区挂上系统
+ro:只读方式挂载
+rw:读写方式
+
+创建挂载点
+mkdir /mnt/dvd
+将镜像文件挂载到 /mnt/dvd
+mount -t iso9660 -o loop /dev/cdrom /mnt/dvd
+
+这种挂载方式只对当前session有效，如果要想永久生效，我们要改变内容到配置文件中
+
+vi /etc/fstab
+
+tmpfs                   /dev/shm                tmpfs   defaults        0 0
+devpts                  /dev/pts                devpts  gid=5,mode=620  0 0
+sysfs                   /sys                    sysfs   defaults        0 0
+proc                    /proc                   proc    defaults        0 0
+/dev/cdrom              /mnt/dvd                iso9660 defaults        0 0
+
+卸载
+umount + 挂载点目录
+umount /mnt/dvd
+
+系统服务管理
+状态管理：
+service -stats-all 列出所有服务及状态
+service sshd status 查看sshd的服务状态
+service httpd status 查看httpd的服务状态
+service httpd [start|stop|restart....]
+
+系统启动管理
+配置后台服务进程开机自启
+chkconfig --list
+chkconfig iptables --list
+chkconfig iptables off #设置防火墙开机不启动
+chkconfig iptables on #设置防火墙开机启动
+
+service iptables stop  设置虚拟机关闭防火墙，并且设置开机不启动
+chkconfig iptables off 
+
+进程管理
+ps -ef 
+ps -aux
+kill -9 
+pstree
+free
+top 
+
+netstat -nltp 
+
+
+网络管理
+主机名管理
+hostname + 新主机名 #临时修改
+hostname hadoop
+
+vi /etc/sysconfig/network #永久修改
+修改HOSTNAME=hadoop
+
+临时修改+永久修改
+
+修改IP地址
+
+ifconfig eth0 192.168.91.6 临时修改
+
+永久修改
+vi /etc/sysconfig/network-scripts/ifcfg-eth0
+
+三台机器，组建一个局域网，三台机器之间能够互相通讯
+
+vmware提供的网络连接方式
+桥接模式：虚拟机相当于真实网络中的计算机
+配置网络网关需要和主机一致
+IP地址要和主机的IP地址在同一个网段
+IP地址不能冲突
+虚拟机能够访问主机上网络的任何机器，网络内的其他主机也可以访问这台虚拟机
+
+NAT模式
+使用vmnet8作为虚拟交换机，虚拟机之间通过vmnet8互相通讯
+虚拟机可以访问主机网络内的任何主机
+主机网络内的其他主机无法访问虚拟机
+
+
+
+搭建一个虚拟机的局域网
+需要三台虚拟机（mini版）
+网络连接方式选择NAT模式
+VMNET8虚拟交换机的地址设置为192.168.91.2（设置网关）
+编辑==》虚拟网络编辑器====》vmnet8=====>先改网段======>nat设置=====》网关 
+
+
+修改三台机器的IP地址
+GATEWAY=192.168.91.2
+IPADDR=192.168.91.3
+NETMASK=255.255.255.0
+ONBOOT=YES
+BOOTPROTO=STATIC
+DNS1=8.8.8.8
+
+service network restart
+
+修改主机名：临时修改+永久修改
+hostname mini1
+vi /etc/sysconfig/network #永久修改
+修改HOSTNAME=mini1 
+
+service iptables stop 
+chkconfig iptables off
+
+
+修改主机映射
+vi /etc/hosts
+192.168.91.3 mini1
+192.168.91.4 mini2
+192.168.91.5 mini3
+
+
+GATEWAY=192.168.91.2
+IPADDR=192.168.91.4
+NETMASK=255.255.255.0
+ONBOOT=YES
+BOOTPROTO=STATIC
+DNS1=8.8.8.8
+
+service network restart
+
+修改主机名：临时修改+永久修改
+hostname mini2
+vi /etc/sysconfig/network #永久修改
+修改HOSTNAME=mini2 
+
+service iptables stop 
+chkconfig iptables off
+
+修改主机映射
+vi /etc/hosts
+192.168.91.3 mini1
+192.168.91.4 mini2
+192.168.91.5 mini3
+
+
+GATEWAY=192.168.91.2
+IPADDR=192.168.91.5
+NETMASK=255.255.255.0
+ONBOOT=YES
+BOOTPROTO=STATIC
+DNS1=8.8.8.8
+
+service network restart
+
+修改主机名：临时修改+永久修改
+hostname mini3
+vi /etc/sysconfig/network #永久修改
+修改HOSTNAME=mini3 
+
+service iptables stop 
+chkconfig iptables off
+
+修改主机映射
+vi /etc/hosts
+192.168.91.3 mini1
+192.168.91.4 mini2
+192.168.91.5 mini3
+
+
+
+克隆虚拟机
+选中关闭的虚拟机点管理====》克隆=====》创建完整克隆====》选择保存位置=====》克隆完成
+克隆虚拟机后的修改操作如下：
+
+网卡的记录信息需要修改
+vi /etc/udev/rules.d/70-persistent-net.rules
+删除eth0的信息，将eth1改成eth0
+修改IP地址将hwaddr和uuid两行删除，修改IP地址
+修改主机名：永久修改即可
+重新启动虚拟机
+
+任务一、
+组建一个局域网，三台机器之间能够互相通讯，nat模式
+网关192.168.91.2
+三台机器
+192.168.91.3 mini1
+192.168.91.4 mini2
+192.168.91.5 mini3
+要求防火墙都关闭掉
+防火墙开机不启动
+
+任务二、熟练掌握文件的编辑和服务管理命令
+
+
+第三天:
+tail -f和tail -F的区别
+文件很大，适合使用哪儿些命令查看
+光标所在处前开始输入
+光标所在行行首开始输入
+光标所在处后开始输入
+光标所在行行尾开始输入
+光标所在行下一行开始输入
+光标所在行上一行开始输入
+定位到首行
+定位到尾行
+查找光标所在行的第一个sbin并替换成gp1919
+：s/sbin/gp1919
+查找光标所在行的所有的root并替换成gp1919
+:s/sbin/gp1919/g
+查找文件中所有的sbin替换成gp1919
+:%s/sbin/gp1919/g
+从第5行开始到文件末尾将所有的gp1919改为gp-1919
+:5,$s/sbin/gp1919/g
+关闭防火墙
+service iptables stop 
+设置防火墙开机不启动
+chkconfig iptables off 
+查看防火墙开机启动项
+chkconfig iptables --list
+开启防火墙
+service iptables start 
+mysql
+
+service mysql start 
+
+软件的安装
+
+二进制的安装
+优点：安装简单
+缺点：缺乏灵活性，提供了很多大打包方式，常见的有rpm,还有以.tar.gz、“.bz2"
+
+安装方式
+直接解包解压缩即可使用
+需要执行安装脚本，按照安装脚本的提示进行安装
+
+测试安装：JDK
+C:\Windows\System32\drivers\etc\hosts 配置主机映射
+
+创建一个目录 /data
+将软件包上传到/data目录下
+将软件包解包解压缩
+tar -zxvf /data/jdk-8u60-linux-x64.gz -C /apps/
+
+vi /etc/profile
+再末尾加入
+export JAVA_HOME=/apps/jdk1.8.0_60
+export PATH=$PATH:$JAVA_HOME/bin
+保存退出
+
+重新加载环境变量
+source /etc/profile
+
+测试： java -version
+
+rpm的安装
+优点：
+安装特别简单，安装过程中会自动寻找安装位置并记录，卸载可以使用RPM的命令去卸载
+缺点：依赖的问题，需要安装人员自己去解决
+rpm 的安装命令
+i  install
+v  
+h  hash
+
+rpm -ivh /apps/MySQL-server-5.6.26-1.linux_glibc2.5.x86_64 
+
+错误一：
+ error: Failed dependencies:
+        /usr/bin/perl is needed by MySQL-server-5.6.26-1.linux_glibc2.5.x86_64
+        libaio.so.1()(64bit) is needed by MySQL-server-5.6.26-1.linux_glibc2.5.x86_64
+        libaio.so.1(LIBAIO_0.1)(64bit) is needed by MySQL-server-5.6.26-1.linux_glibc2.5.x86_64
+        libaio.so.1(LIBAIO_0.4)(64bit) is needed by MySQL-server-5.6.26-1.linux_glibc2.5.x86_64
+
+解决
+yum list | grep libaio
+yum -y install libaio.x86_64
+
+错误二：
+error: Failed dependencies:
+        /usr/bin/perl is needed by MySQL-server-5.6.26-1.linux_glibc2.5.x86_64
+解决
+yum list | grep perl
+yum -y install perl.x86_64
+
+错误三：冲突问题
+MySQL-server-5.6.26-1.linux_glibc2.5.x86_64 conflicts with file from package mysql-libs-5.1.73-5.el6_6.x86_64
+
+解决
+rpm -e --nodeps mysql-libs-5.1.73-5.el6_6.x86_64
+
+继续安装mysql的服务端
+
+安装客户端
+rpm -ivh /apps/MySQL-client-5.6.26-1.linux_glibc2.5.x86_64.rpm
+
+启动服务端
+service mysql start
+
+查看初始密码
+cat /root/.mysql_secret
+
+运行命令修改密码
+/usr/bin/mysql_secure_installation
+
+按照提示修改新密码
+
+rpm的查询
+-q 查询
+-a all
+rpm -qa | grep mysql 
+
+rpm的卸载
+-e  卸载
+--nodeps 忽略依赖问题
+rpm -e mysql-libs-5.1.73-5.el6_6.x86_64
+
+rpm -e --nodeps mysql-libs-5.1.73-5.el6_6.x86_64
+
+yum的安装
+
+特点：解决了rpm安装的依赖性
+缺点：yum安装需要网络（本地yum除外）
+yum本质就是rpm安装，但是yum安装帮我们解决掉了依赖的问题
+yum安装使用软件仓库里面的软件包进行安装，这些软件包都是收集好的，并且生成了各个软件包的依赖关系
+yum能够安装哪儿些软件取决于我们的yum源（软件仓库）
+yum源有三种：本地yum源（供自己使用），局域网的yum源，网络yum源
+
+yum源的配置文件 /etc/yum.repos.d
+CentOS-Base.repo   自带网络yum源
+CentOS-Debuginfo.repo  
+CentOS-fasttrack.repo
+CentOS-Media.repo  自带的本地的yum源
+CentOS-Vault.repo
+
+yum源的配置文件必须以.repo结尾
+
+配置本地yum源需要准备哪儿些？
+1、收集软件包并解决依赖问题
+使用镜像文件自带的软件包
+创建/mnt/repo目录
+将镜像文件挂载到此目录
+mount -t iso9660 -o loop /dev/cdrom /mnt/repo
+
+2、使原有自带的yum源失效（将原有的yum源配置文件改名）
+rename .repo .repo.bak ./*.repo
+3、配置yum源的配置文件
+local.repo
+[local]  #id
+name=local_repo #name
+baseurl=file:///mnt/repo  #资源的位置（路径）
+enabled=1  #使用这个yum源
+gpgcheck=1 #开启软件包验证
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6 #软件包验证的key
+
+4、yum clean all 清除yum源的缓存
+
+5、yum repolist 查看可用的软件仓库的列表
+
+yum的相关命令
+
+yum list  | grep mysql 列出所有可安装的软件包并进行过滤
+
+yum list mysql* #查看可用的以及已安装的关于mysql的
+
+yum list installed mysql* #列出已安装的关于mysql的安装包
+
+yum info httpd :显示httpd安装包的信息
+
+安装软件的命令
+
+yum -y install + 软件名称
+
+yum -y install ruanjian1 ruanjian2 可用同时安装多个不想关的
+
+yum -y install mysql* 可用同时安装多个相关的 
+
+yum clean all 清除缓存 
+
+yum repolist 查看可用的软件仓库的列表
+
+
+uri资源标识符
+url资源定位符
+
+局域网的yum源的配置
+1、选择一台机器作为服务，需要安装httpd服务
+yum -y install httpd 
+启动httpd服务
+service httpd start 
+2、服务器机器上准备好软件包，并解决好依赖关系
+3、将软件包放在httpd服务的目录下
+使用链接的方式将软件包放入
+链接
+ln -s 源文件  目标位置 （路径都要使用绝对路径）
+ln -s /mnt/repo /var/www/html/repo
+
+4、启动服务器上的httpd服务
+service httpd start 
+5、配置其他机器（客户端）的yum源的配置文件
+先禁用使用rename将后缀名+.bak
+再创建文件并输入一下内容
+[innet]  
+name=innet_repo
+baseurl=http://192.168.91.3/repo（http://mini1/repo）
+enabled=1  
+gpgcheck=1 
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+
+源码包的安装：
+优点：更灵活、可以定制
+缺点：安装比较麻烦，安装之前需要自己进行编译
+
+安装redis
+
+编译过程
+将软件包 上传至/data下
+解包解压缩至/apps下
+进入到redis的目录下
+cd /apps/redis-2.6.16/ 
+使用make命令进行编译
+报错：gcc: Command not found
+解决：yum -y install gcc
+继续使用make命令编译
+报错： #error "Newer version of jemalloc required"
+解决：make MALLOC=libc
+
+安装过程
+make PREFIX=/usr/local/redis  install
+启动redis服务
+$REDIS_HOME/bin/redis-server redis.conf(应包含redis的路径)
+
+ssh免密码登录
+
+ssh：是一种通讯协议，可以实现远程的安全登录（加密）
+Openssh:ssh的远程安全登录的开源实现
+service sshd status 
+
+ssh免密码登录的实现
+ssh-keygen 生成一对秘钥（公钥和私钥，负责加密和解密）
+ssh -t rsa -P '' -f ~/.ssh/id_rsa
+-t 指定加密算法
+-P 使用私钥解密时是否使用密码
+-f 私钥保存的位置
+
+将mini1的公钥拷贝给mini2
+ssh-copy-id mini2
+
+远程拷贝(分发)
+需要安装ssh的客户端
+yum -y install openssh-clients.x86_64
+
+可以通过命令将mini1上的文件拷贝到mini2上
+scp /etc/profile root@mini2:/data/profile.txt
+
+拷贝并改名字
+scp /etc/profile root@mini2:/profile.bak
+
+拷贝目录
+scp -r /bin root@mini2:/bin.bak
+
+下载文件到本地
+在mini1上使用命令将mini2上的文件下载到本地
+scp -r  root@mini2:/bin.bak  /bin.txt
+
+
+时间同步服务器
+1、选择一台机器作为时间服务器
+2、在服务器上要安装ntp服务
+使用yum安装，安装ntp服务
+yum list | grep ntp
+yum -y install ntp.x86_64 
+编辑配置文件
+vi /etc/ntp.conf
+
+# Hosts on local network are less restricted.
+restrict 192.168.91.0 mask 255.255.255.0 nomodify notrap #允许哪儿个网段上的机器来进行时间同步
+
+# Use public servers from the pool.ntp.org project.
+# Please consider joining the pool (http://www.pool.ntp.org/join.html).
+#server 0.centos.pool.ntp.org iburst	    禁用服务
+#server 1.centos.pool.ntp.org iburst        禁用服务
+#server 2.centos.pool.ntp.org iburst        禁用服务
+#server 3.centos.pool.ntp.org iburst        禁用服务
+server 127.127.1.0 自己配置一个服务
+
+配置完成后保存退出
+启动ntp服务
+service ntpd start 
+
+3、其他机器上需要ntpdate服务，通过这个服务与时间服务器进行时间同步
+安装ntpdate 
+yum list | grep ntpd
+
+4、时间同步要定期执行，可以使用crontab(定时任务)
+配置crontab任务（定时执行）
+crontab -e 
+*/1 * * * *  /usr/sbin/ntpdate mini1 >> /data/ntp.log
+
+
+防火墙必须关闭
+时间必须同步
+
+crontab配置
+通过crontab命令，我们可以在固定的时间间隔去执行指定的系统命令或者shell script
+时间间隔的单位可以是分钟、小时、日、月、周以及上述的任意组合，这个命令非常适合周期性的
+日志分析或者是数据备份工作
+
+服务的管理
+service crond start/stop/restart/status/reload
+
+命令格式
+crontab [-u user] file
+crontab [-u user ] [-e | -l | -r]
+
+参数：
+-u user 用来设置某个用户的crontab服务， -u hadoop
+file：file是命令文件的名字，表示将该文件作为crontab服务的任务列表文件并载入crontab
+crontab -u root a.txt (a.txt中就是要执行的任务)
+
+-e : 编辑某个用户的crontab任务，如不指定用户，则表示编辑当前用户的crontab任务
+-l :列举某个用户的crontab任务
+-r : 删除某个用户的crontab任务
+
+配置说明：
+基本格式
+分钟、小时、日、 月、 周
+  *     *    *    *   *
+分：表示1-59分钟，*/1表示 每分钟
+时：表示小时从0-23（0表示0点）7-9 表示7点到9点
+天：1-31，表示日期
+月：表示月份1-12
+周：表示星期几，从0开始到6（0表示星期日）
+
+crontab -e 
+*/1 * * * * date >> /date.log
+
+例子
+30 21 * * * date >>/1.txt
+每天21:30执行一次date命令
+
+45 4 1,10,22 * * date >>/1.txt
+每月的1、10、22日的4:45分执行任务
+
+10 1 * * 5,0 date >>/1.txt
+每周的周五、周日的1:10执行任务
+
+0,30 15-23 * * * date >>/1.txt
+每天15点到23点之间每隔半小时执行一次date命令
+
+0,30 15-23 * * 6 date >>/1.txt
+
+0,30 15-23 10 * 6 date >>/1.txt
+每周六、每月10号15点到23点之间每隔半小时执行一次date命令
+
+* */1 * * * date >>/1.txt
+每小时执行一次
+
+* 23-7/1 * * * date >>/1.txt
+23点到7点，每小时执行一次
+
+0 10 4 * mon-wed date >>/1.txt
+周一到周三、每月4号的10点
+
+0 4 1 Jan * >>/1.txt
+1月1日的4点执行一次
+
+shell
+什么是shell
+可以说是一种语言，或者说是一种命令。它是用户和linux沟通的桥梁，shell脚本是一种为shell编写的脚本程序
+使用shell的语法规则编写出的一个linux命令的集合
+
+shell解释器
+shell编程和java\php等语言一样，只需要一个文本编辑器和一个解析器即可
+
+常见的shell
+c shell 
+k shell 
+bash 
+sh
+....
+
+linux自带的sh
+bash是免费的，也是大部分linux操作系统默认的shell
+
+1.编写一个shell / hello world 
+mkdir -p /shell/scripts
+vi /shell/scripts/hello.sh
+#!/bin/bash #表示用哪儿一种shell解释器来解释执行脚本程序
+可以删除这一行，如果删除，那就是用linux默认的解释器来执行
+如果使用其他的编译型语言必须加上改行
+
+#!/bin/bash
+echo "hello world"
+
+bash /shell/scripts/hello.sh 执行shell脚本
+
+shell变量
+系统变量和自定义变量
+变量的查看使用：set
+
+A="hello world"
+echo $A
+
+echo "$Ais big" #查找的变量是Ais,这个变量不存在
+
+echo "$A is big" #双引号会将空格脱意
+
+echo "$(A)s is big"
+
+echo '$A is big' :单引号会原样输出
+
+echo '$(A) is big'
+
+变量的撤销
+
+unset A 
+
+只读变量，不可改变，相当于java中被final修饰的
+readonly b=25
+
+程序的执行空间
+
+vi a.sh 
+#!/bin/bash
+a="a is in a.sh"
+echo $a
+bash /shell/scripts/b.sh
+
+vi b.sh 
+#!/bin/bash
+b="b is in b.sh"
+echo $b
+echo $a
+
+bash a.sh 
+
+输出结果？
+a is in a.sh
+b is in b.sh
+null
+
+a.sh执行会开启一个进程空间执行a.sh，b.sh会在a的子进程空间执行，所以b.sh获取不到变量a
+如果使用export a 定义，export将变量a提升为全局的变量，也就是说a.sh所有的子进程都能访问a变量
+
+
+第四天:
+每周的周五、周日的1:10执行任务
+每周六、每月10号15点到23点之间每隔半小时执行一次date命令
+将mini1上的/bin远程拷贝到mini2上的/data目录下的命令
+使用yum安装httpd服务的命令
+列出可用的yum源仓库的命令
+写出二进制安装jdk的步骤
+
+程序的执行空间
+vi a.sh 
+#!/bin/bash
+a="a is in a.sh"
+echo $a
+bash /shell/scripts/b.sh
+
+vi b.sh 
+#!/bin/bash
+b="b is in b.sh"
+echo $b
+echo $a
+
+bash a.sh 
+
+输出结果？
+a is in a.sh
+b is in b.sh
+null
+
+使用export声明变量，提升变量为全局的，也就是该进程的子进程可以使用访问到该变量
+
+vi a.sh 
+#!/bin/bash
+a="a is in a.sh"
+echo $a
+source /shell/scripts/b.sh
+
+vi b.sh 
+#!/bin/bash
+b="b is in b.sh"
+echo $b
+echo $a
+
+bash a.sh 
+
+输出结果？
+a is in a.sh
+b is in b.sh
+a is in a.sh
+
+用 . 或者source 去执行程序，是将程序拉倒当前进程空间去执行
+
+总结：
+1、a.sh直接调用b.sh,会让b.sh在a所在的进程空间去创建一个子进程空间来执行b脚本
+2、子进程空间只能访问父进程空间用export 提升过的变量
+3、一个shell进程无法将自己定义的变量提升到父进程空间中
+4、“."执行脚本时，会让脚本在调用者的进程空间去执行
+
+变量赋值:
+反引号赋值：如果一个变在执行前不能确定结果，我们可以使用反$引号的方式赋值
+例如：A=`date`
+B=$(ls -al)
+
+shell中特殊的变量
+$?:表示上一个命令的返回状态(0-255),不同的错误返回的状态码不一样
+
+$$:当前进程编号
+
+$0:表示当前脚本名称
+
+$n:表示第n个参数（touch /1.txt ./2.txt)执行脚本时外部指定的，当n为0时表示脚本名称，当n大于9的时候用大括号括起来${10}
+
+$# 表示参数的个数
+
+$@、$*:参数列表，不确定参数的个数的时候可以使用这两个命令
+在使用时没有区别（除去这两个命令被双引号包起来的时候）
+"$@" :会将各个参数分开 "$1","$2","$3"....
+"$*" :会是一个整体"$1 $2 $3...."
+
+1 2 3 4 5
+
+1
+2
+3
+4
+5
+“1 2 3 4 5”
+
+shell运算符
+1、用expr
+格式：expr m + n 或者 $((m+n))
+注意：expr运算符中间必须有空格
+例如：(2+3)*4
+S=`expr 2 + 3`
+S=`expr $S \* 4`
+
+S=`expr \`expr 2 + 3\` \* 4`
+
+用（（））处理
+(((2+3)*4))
+
+W=$(((2+3)*4))
+
+用$[]
+Y=$[(2+3)*4*(1+2)]
+
+let的使用
+i=10
+let i++
+let i=i+2
+
+常用的判断运算符
+字符的判断
+=
+!=
+-z :表示判断字符串长度是否为0，为0返回true [ -z "123" ] echo $?
+-n :表示判断字符串长度，不为0则返回true [ -n "456" ] echo $?
+
+整数的比较
+-lt 小于
+-le 小于等于
+-gt 大于
+-ge 大于等于
+-eq 等于
+-ne 不等于
+
+\>、\>=、 \< 、\<= 、=
+
+文件比较：
+-r :有读权限
+-w :有写权限
+-x ：有执行权限
+-s ：文件存在且不为空
+-e ：判断文件存在
+-d ：判断是否为目录
+-b ：文件存在并且是一块设备
+-L ：是否是一个链接
+[ -L /bin ]
+
+流程控制语句
+if
+case
+while
+for
+
+基本结构化命令if - then语句
+if [ condition ](括号前后必须有空格)
+then 
+	command
+	command
+fi
+
+year=1979
+if [ $year -eq 1979 ]; then echo "$year年"; let year--;echo "$year年";fi
+
+
+if - then -else 语句
+
+if [ condition ](括号前后必须有空格)
+then 
+	command
+	command
+else
+	command
+    command
+	...
+fi
+
+if [ $year -gt 1979 ]; then echo "$year年"; else let year--;echo "$year年 is old";fi
+
+嵌套if：
+shell会依次执行if语句，只有第一个返回退出状态码为0的语句中then的部分会被执行
+非0状态下执行else
+
+if [ condition ](括号前后必须有空格)
+then 
+	command
+	command
+
+elif [ condition ]
+then
+	command
+    command	
+else
+	command
+    command
+	...
+fi
+
+year=1979
+if [ $year -eq 1979 ]
+then echo "$year年 is 改革元年"
+elif [ $year -lt 1979 ] 
+then echo "$year年 is old"
+else echo "$year年 is new"
+fi
+
+或者这样写
+if [ $year -eq 1979 ]; then echo "$year年 is 改革元年"; elif [ $year -lt 1979 ] ; then echo "$year年 is old"; else echo "$year年 is new"; fi
+
+判断条件
+1、基本语法
+[ condition ] 前后必须带空格
+非空则返回true
+[ '123' ] echo $? 返回0
+[ '' ] echo $? 返回1 
+
+相当于b赋值给a
+if [ a=b ];then echo "nook";else echo "ok";fi
+nook
+
+相当于比较a和b是否相等
+if [ a = b ];then echo "nook";else echo "ok";fi
+ok
+
+三元运算符：
+[ condition ] && echo "ok" || echo "nook"
+condition ? 0:1
+当条件满足时输出&& echo "ok"
+条件不满足时输出echo "nook"
+
+条件判断的组合
+[] -a -o 
+[[]] && || 
+
+if [ a = b && b = c ];then echo ok;else echo "nook";fi 会报错应使用 -a 
+if [ a = b -a b = c ];then echo ok;else echo "nook";fi
+[]与 -a(and) 和 -o(or)一起使用
+
+[[]] 与 && ||一起使用
+if [[ a = b && b = c ]];then echo ok;else echo "nook";fi
+
+read:人机交互界面，程序中可用来获取用户手动输入的值
+模拟注册的页面
+
+vi login.sh
+
+#!/bin/bash
+echo "国籍:"
+read value
+echo $value
+
+#!/bin/bash
+echo "国籍:"
+read -p "姓名:" name
+echo $value
+
+-p（提示语句不换行）
+-t(限定等待时间)
+-n (限定输入的字符个数)
+
+模拟一个用户登录的界面
+#!/bin/bash
+user=zhangsan
+passwd=123456
+read -p "用户名:" username
+if [ $username = $user ]
+then 
+echo "$username 用户存在"
+read -p "密码:" pwd
+if [ $passwd = $pwd ]
+then echo "登录成功"
+else 
+
+.....
+
+while循环：
+第一种写法：
+while [ expression ] (括号两边有空格)
+do 
+command
+command
+......
+done
+
+当一个数字小于10，打印数字，数字加加
+#!/bin/bash
+read -p "请输入一个数字:" num
+while [ $num -lt 10 ]
+do
+echo "$num"
+let num++
+done
+
+如何使用外部给定的参数？
+#!/bin/bash
+num=$1
+while [ $num -lt 10 ]
+do
+echo "$num"
+let num++
+done
+
+num=10
+while ((num>=5))
+do
+echo $num
+let num--
+done
+
+shell中也支持break,continue
+
+case 语句
+case 值 in
+	模式1)
+	command
+	command
+	.....
+	模式2)
+	command
+	command
+	...
+esac
+
+支持continue，break
+
+while :
+do
+read -p "请输入一个1-5的数字" num
+	case $num in 
+		1|2|3)
+		echo "您输入的数字为$num,属于1-3之间"
+		break
+		;;
+		4|5)
+		echo "您输入的数字为$num,属于4-5之间"
+		break
+		;;
+		*)
+		echo "请输入一个1-5的数字,您输入的数字为$num"
+		continue
+	esac
+done
+
+for循环
+
+第一种写法：
+for i in  1 2 3 (可以使用$@，执行时获取参数)
+do
+echo $i
+done
+
+第二种写法
+
+for((i=0;i<=5;i++))
+do
+echo $i
+done
+
+for((i=0;i<=5;i++)); do echo $i; done
+
+shell的自定义函数
+
+语法：
+[function] 函数名称()
+{
+	action
+	[return int;]  ##0-255
+}
+
+vi sum.sh 
+#!/bin/bash
+param1=$1
+param2=$2
+function sum()
+{
+	returnValue=$((param1+param2))
+	return $returnValue
+}
+
+sum param1 param2
+echo $?
+
+1、如果使用return返回，只能使用$?去获取函数的返回值，并且这个返回值只能在0-255之间,可以通过echo $?直接返回，
+但是echo $? 必须紧跟函数调用下一条命令
+2、不加return返回，以最后一条命令运行结果做为返回值
+
+#!/bin/bash
+param1=$1
+param2=$2
+function sum()
+{
+	returnValue=$((param1+param2))
+	echo $returnValue
+	
+}
+
+sum param1 param2
+
+#!/bin/bash
+param1=$1
+param2=$2
+function sum()
+{
+	returnValue=$((param1+param2))
+	echo $returnValue
+	echo $param1
+}
+
+sum param1 param2
+
+模拟用户的登录界面
+判断用户名是否存在
+用户名存在的话判断密码是否正确
+用户名不存在的话直接返回用户名不存在
+用户名和密码可以在脚本中自己指定
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

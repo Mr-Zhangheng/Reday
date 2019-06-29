@@ -1,0 +1,430 @@
+1、flume是一个分布式的、可靠的、高可用的日志收集工具
+2、flume的架构
+3、flume的组件及应用
+client：客户端（运行agent的地方）
+source:数据源，负责收集数据，将数据写入channel
+channel：管道，缓存数据的地方（缓存一定有大小），将数据推送到sink
+sink:下沉器，负责拉取channel端的数据，将数据存储到存储系统
+interceptor：拦截器，flume允许使用拦截器，拦截器可以作用于source端
+也可以作用于sink端，支持拦截器链
+selector：作用于source端，决定数据往哪儿个channel中发送
+event:flume的事件，相当于一条数据。
+agent：flume 的客户端，一个agent运行在一个jvm里，是flume运行的最小单元
+
+
+source的种类
+avro\exec\spooling dir\syslogtcp\kafka\taildir
+
+channel的种类
+file、memory、kafka、jdbc......
+
+sink的种类：
+avro、hdfs、kafka、hive、hbase.......
+
+数据模型
+单一的数据模型
+多数据流的模型
+
+flume的安装：
+flume的版本问题。
+
+source：avro
+channel:memory
+sink:logger
+
+#name the components on the agent
+a1.sources = r1
+a1.channels = c1
+a1.sinks = k1
+
+
+#describe sources
+a1.sources.r1.type = avro
+a1.sources.r1.bind = 192.168.91.3
+a1.sources.r1.port = 4141
+
+
+#describe channels
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 10000
+a1.channels.c1.transactionCapacity = 10000
+a1.channels.c1.byteCapacityBufferPercentage = 20
+a1.channels.c1.byteCapacity = 800000
+
+#describe sinks
+a1.sinks.k1.type = logger
+
+
+#bind source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+启动agent
+flume-ng agent -c conf -f avro-mem-log.conf -n a1 -Dflume.root.logger=INFO,console
+agent 启动
+-c 加载默认配置文件
+-f 加载我们定制的服务
+-n 指定要启动的agent的名字
+-Dflume.root.logger=INFO,console 将信息打印到屏幕
+
+测试：
+flume-ng avro-client -c conf -H 192.168.91.3 -p 4141 -F /etc/profile
+avro-client 运行avro stream的客户端
+-H 连接的ip
+-p 端口号
+-F 要发送的文件
+
+netcat+memory+logger
+
+#name the components on the agent
+a1.sources = r1
+a1.channels = c1
+a1.sinks = k1
+
+
+#describe sources
+a1.sources.r1.type = netcat
+a1.sources.r1.bind = 192.168.91.3
+a1.sources.r1.port = 4141
+
+#describe channels
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 10000
+a1.channels.c1.transactionCapacity = 10000
+a1.channels.c1.byteCapacityBufferPercentage = 20
+a1.channels.c1.byteCapacity = 800000
+
+#describe sinks
+a1.sinks.k1.type = logger
+
+#bind source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+telnet mini1 4141 
+
+
+
+exec+memory+hdfs
+#name the components on the agent
+a1.sources = r1
+a1.channels = c1
+a1.sinks = k1
+
+#describe sources
+a1.sources.r1.type = exec
+a1.sources.r1.command = tail -F /flumeconf/b.txt
+
+#describe channels
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 10000
+a1.channels.c1.transactionCapacity = 10000
+a1.channels.c1.byteCapacityBufferPercentage = 20
+a1.channels.c1.byteCapacity = 800000
+
+#describe sinks
+a1.sinks.k1.type = hdfs
+a1.sinks.k1.hdfs.path = hdfs://mini1:9000/flume/events/%y-%m-%d/%H%M/  (hdfs://ns1/flume/events/%y-%m-%d/%H%M/)高可用的写法
+a1.sinks.k1.hdfs.useLocalTimeStamp=true（由于，生成的目录中，时间是动态获取的，所以一定要设置成true，如果设置成false,需要在拦截器中加入时间戳的拦截器）
+
+
+#bind source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+案例4：spooldir+mem+hdfs
+注意事项：
+1、不能在监控目录下直接写文件
+2、不能把同名的文件放到监控目录下
+3、flume采集过来的数据在hdfs上存储的单个文件的大小一般不会超过2G
+4、注意文件前缀的使用（可以拼接业务名）
+5、注意目录的使用（可以拼接业务）
+vi agentconf/spooldir-hdfs.conf
+# Name the components on this agent
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+# Describe/configure the source
+a1.sources.r1.type = spooldir
+##这个目录需要事先创建出来
+a1.sources.r1.spoolDir = /flumedata/
+a1.sources.r1.fileHeader = true
+
+# Describe the sink
+a1.sinks.k1.type = hdfs
+a1.sinks.k1.hdfs.path = /flume/events/%y-%m-%d/%H%M/
+a1.sinks.k1.hdfs.filePrefix = fenqi-
+#(目录是否自动生成)
+a1.sinks.k1.hdfs.round = true
+#（时间间隔）
+a1.sinks.k1.hdfs.roundValue = 30
+#（时间单位）
+a1.sinks.k1.hdfs.roundUnit = second
+#3秒就生成一个新的文件
+a1.sinks.k1.hdfs.rollInterval = 3
+#200字节生成一个新的文件
+a1.sinks.k1.hdfs.rollSize = 200
+#event的数量达到10个就生成新的文件
+a1.sinks.k1.hdfs.rollCount = 10
+#多少个event写入一次HDFS
+a1.sinks.k1.hdfs.batchSize = 10
+a1.sinks.k1.hdfs.useLocalTimeStamp = true
+a1.sinks.k1.hdfs.fileType = DataStream
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+
+
+拦截器
+a1.sources = r1 r1
+a1.channels = c1
+a1.sinks = s1
+
+a1.sources.r1.type=syslogtcp
+a1.sources.r1.host = mini1
+a1.sources.r1.port = 6666
+a1.sources.r1.interceptors=i1 i2 i3
+a1.sources.r1.interceptors.i1.type=timestamp
+a1.sources.r1.interceptors.i1.preserveExisting=false
+a1.sources.r1.interceptors.i2.type=host
+a1.sources.r1.interceptors.i2.preserveExisting=false
+a1.sources.r1.interceptors.i2.useIP=true
+a1.sources.r1.interceptors.i2.hostHeader=hostname
+a1.sources.r1.interceptors.i3.type=static
+a1.sources.r1.interceptors.i3.preserveExisting=false
+a1.sources.r1.interceptors.i3.key=hn
+a1.sources.r1.interceptors.i3.value=web.log
+
+a1.channels.c1.type=memory
+a1.channels.c1.capacity=1000
+a1.channels.c1.transactionCapacity=100
+a1.channels.c1.keep-alive=3
+a1.channels.c1.byteCapacityBufferPercentage=20
+a1.channels.c1.byteCapacity=800000
+
+a1.sinks.s1.type=hdfs
+a1.sinks.s1.hdfs.path=hdfs://mini19000/flume/%{hn}/%Y/%m/%d/%H%M
+a1.sinks.s1.hdfs.filePrefix=%{hostname}-%{hn}
+a1.sinks.s1.hdfs.fileSuffix=.log
+a1.sinks.s1.hdfs.inUseSuffix=.tmp
+a1.sinks.s1.hdfs.rollInterval=60
+a1.sinks.s1.hdfs.rollSize=1024
+a1.sinks.s1.hdfs.rollCount=10
+a1.sinks.s1.hdfs.idleTimeout=0
+a1.sinks.s1.hdfs.batchSize=100
+a1.sinks.s1.hdfs.fileType=DataStream
+a1.sinks.s1.hdfs.writeFormat=Text
+a1.sinks.s1.hdfs.round=true
+a1.sinks.s1.hdfs.roundValue=5
+a1.sinks.s1.hdfs.roundUnit=second
+a1.sinks.s1.hdfs.useLocalTimeStamp=false
+
+
+a1.sources.r1.channels=c1
+a1.sinks.s1.channel=c1
+
+#####案例3、复制选择器
+vi ./conf/rep
+a1.sources=r1
+a1.channels=c1 c2
+a1.sinks=s1 s2
+
+a1.sources.r1.type=exec
+a1.sources.r1.command= tail -f /home/flumedata/test.dat
+a1.sources.r1.selector.type = replicating
+a1.sources.r1.selector.optional = c2
+
+a1.channels.c1.type=memory
+a1.channels.c1.capacity=1000
+a1.channels.c1.transactionCapacity=100
+a1.channels.c1.keep-alive=3
+a1.channels.c1.byteCapacityBufferPercentage = 20
+a1.channels.c1.byteCapacity = 800000
+
+a1.channels.c2.type=memory
+a1.channels.c2.capacity=1000
+a1.channels.c2.transactionCapacity=100
+a1.channels.c2.keep-alive=3
+a1.channels.c2.byteCapacityBufferPercentage = 20
+a1.channels.c2.byteCapacity = 800000
+
+a1.sinks.s1.type = logger
+
+a1.sinks.s2.type = hdfs
+a1.sinks.s2.hdfs.path = /flume/repevents/%y-%m-%d/%H%M/
+a1.sinks.s2.hdfs.filePrefix = event-
+a1.sinks.s2.hdfs.fileSuffix=.log
+a1.sinks.s2.hdfs.inUseSuffix=.tmp
+a1.sinks.s2.hdfs.rollInterval=2
+a1.sinks.s2.hdfs.rollSize=1024
+a1.sinks.s2.hdfs.fileType=DataStream
+a1.sinks.s2.hdfs.writeFormat=Text
+a1.sinks.s2.hdfs.round = true
+a1.sinks.s2.hdfs.roundValue = 1
+a1.sinks.s2.hdfs.roundUnit = second
+a1.sinks.s2.hdfs.useLocalTimeStamp=true
+
+a1.sources.r1.channels=c1 c2
+a1.sinks.s1.channel=c1
+a1.sinks.s2.channel=c2
+
+启动：
+bin/flume-ng agent -c ./conf/ -f ./agentconf/rep.conf -n a1 -Dflume.root.logger=INFO,console
+
+#####案例4、复分选择器
+vi ./agentconf/mul.conf
+a1.sources=r1
+a1.channels=c1 c2
+a1.sinks=s1 s2
+
+a1.sources.r1.type=org.apache.flume.source.http.HTTPSource
+a1.sources.r1.port=6666
+a1.sources.r1.bind=mini1
+a1.sources.r1.selector.type = multiplexing
+a1.sources.r1.selector.header = status
+a1.sources.r1.selector.mapping.CZ = c1
+a1.sources.r1.selector.mapping.US = c2
+a1.sources.r1.selector.default = c1
+
+a1.channels.c1.type=memory
+a1.channels.c1.capacity=1000
+a1.channels.c1.transactionCapacity=100
+a1.channels.c1.keep-alive=3
+a1.channels.c1.byteCapacityBufferPercentage = 20
+a1.channels.c1.byteCapacity = 800000
+
+a1.channels.c2.type=memory
+a1.channels.c2.capacity=1000
+a1.channels.c2.transactionCapacity=100
+a1.channels.c2.keep-alive=3
+a1.channels.c2.byteCapacityBufferPercentage = 20
+a1.channels.c2.byteCapacity = 800000
+
+a1.sinks.s1.type = logger
+
+a1.sinks.s2.type = hdfs
+a1.sinks.s2.hdfs.path = /flume/mulevents/%y-%m-%d/%H%M/
+a1.sinks.s2.hdfs.filePrefix = event-
+a1.sinks.s2.hdfs.fileSuffix=.log
+a1.sinks.s2.hdfs.inUseSuffix=.tmp
+a1.sinks.s2.hdfs.rollInterval=2
+a1.sinks.s2.hdfs.rollSize=1024
+a1.sinks.s2.hdfs.fileType=DataStream
+a1.sinks.s2.hdfs.writeFormat=Text
+a1.sinks.s2.hdfs.round = true
+a1.sinks.s2.hdfs.roundValue = 1
+a1.sinks.s2.hdfs.roundUnit = second
+a1.sinks.s2.hdfs.useLocalTimeStamp=true
+
+a1.sources.r1.channels=c1 c2
+a1.sinks.s1.channel=c1
+a1.sinks.s2.channel=c2
+
+启动：
+bin/flume-ng agent -c ./conf/ -f ./agentconf/mul.conf -n a1 -Dflume.root.logger=INFO,console
+
+测试数据：
+curl -X POST -d '[{"headers":{"status":"2017-06-13"},"body":"this is default"}]' http://mini1:6666
+curl -X POST -d '[{"headers":{"status":"CZ"},"body":"this is CZ"}]' http://mini1:6666
+curl -X POST -d '[{"headers":{"status":"US"},"body":"this is US"}]' http://mini1:6666
+
+
+案例：日志采集和汇总
+1、客户端配置（hdp01、hdp02）：
+vi testconf/exec_source_avro_sink.conf
+# Name the components on this agent
+a1.sources = r1 r2 r3
+a1.sinks = k1
+a1.channels = c1
+
+# Describe/configure the source
+a1.sources.r1.type = exec
+a1.sources.r1.command = tail -F /home/flumedata/access.log
+a1.sources.r1.interceptors = i1
+a1.sources.r1.interceptors.i1.type = static
+a1.sources.r1.interceptors.i1.key = type
+a1.sources.r1.interceptors.i1.value = access
+
+a1.sources.r2.type = exec
+a1.sources.r2.command = tail -F /home/flumedata/nginx.log
+a1.sources.r2.interceptors = i2
+a1.sources.r2.interceptors.i2.type = static
+a1.sources.r2.interceptors.i2.key = type
+a1.sources.r2.interceptors.i2.value = nginx
+
+a1.sources.r3.type = exec
+a1.sources.r3.command = tail -F /home/flumedata/web.log
+a1.sources.r3.interceptors = i3
+a1.sources.r3.interceptors.i3.type = static
+a1.sources.r3.interceptors.i3.key = type
+a1.sources.r3.interceptors.i3.value = web
+
+# Describe the sink
+a1.sinks.k1.type = avro
+a1.sinks.k1.hostname = mini3
+a1.sinks.k1.port = 41414
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 2000000
+a1.channels.c1.transactionCapacity = 100000
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sources.r2.channels = c1
+a1.sources.r3.channels = c1
+a1.sinks.k1.channel = c1
+
+2、汇总端配置(hdp03):
+vi tetconf/avro_source_hdfs_sink.conf
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+
+a1.sources.r1.type = avro
+a1.sources.r1.bind = mini3
+a1.sources.r1.port =41414
+
+a1.sources.r1.interceptors = i1
+a1.sources.r1.interceptors.i1.type = org.apache.flume.interceptor.TimestampInterceptor$Builder
+
+
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 20000
+a1.channels.c1.transactionCapacity = 10000
+
+a1.sinks.k1.type = hdfs
+a1.sinks.k1.hdfs.path=hdfs://mini1:9000/flume/logs/%{type}/%Y%m%d
+a1.sinks.k1.hdfs.filePrefix =events
+a1.sinks.k1.hdfs.fileType = DataStream
+a1.sinks.k1.hdfs.writeFormat = Text
+#a1.sinks.k1.hdfs.useLocalTimeStamp = true
+a1.sinks.k1.hdfs.rollCount = 0
+a1.sinks.k1.hdfs.rollInterval = 30
+a1.sinks.k1.hdfs.rollSize  = 10485760
+#a1.sinks.k1.hdfs.rollSize  =0
+a1.sinks.k1.hdfs.batchSize = 10000
+a1.sinks.k1.hdfs.threadsPoolSize=10
+a1.sinks.k1.hdfs.callTimeout=30000
+
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+启动：先启动汇总端，再启动客户端
+bin/flume-ng agent -c conf/ -f testconf/exec_source_avro_sink.conf -n a1 -Dflume.root.logger=INFO,console
+
+汇聚节点做高可用
+
+
+
+
+

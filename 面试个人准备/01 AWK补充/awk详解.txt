@@ -1,0 +1,481 @@
+简介
+awk是一个强大的文本分析工具，相对于grep的查找，sed的编辑，awk在其对数据分析并生成报告时，显得尤为强大。简单来说awk就是把文件逐行的读入，以空格为默认分隔符将每行切片，切开的部分再进行各种分析处理。
+
+awk有3个不同版本: awk、nawk和gawk，未作特别说明，一般指gawk，gawk 是 AWK 的 GNU 版本。
+
+awk允许您创建简短的程序，这些程序读取输入文件、为数据排序、处理数据、对输入执行计算以及生成报表，还有无数其他的功能。
+
+ 
+
+使用方法
+awk '{pattern + action}' {filenames}
+尽管操作可能会很复杂，但语法总是这样，其中 pattern 表示 AWK 在数据中查找的内容，而 action 是在找到匹配内容时所执行的一系列命令。花括号（{}）不需要在程序中始终出现，但它们用于根据特定的模式对一系列指令进行分组。 pattern就是要表示的正则表达式，用斜杠括起来。
+
+awk语言的最基本功能是在文件或者字符串中基于指定规则浏览和抽取信息，awk抽取信息后，才能进行其他文本操作。完整的awk脚本通常用来格式化文本文件中的信息。
+
+通常，awk是以文件的一行为处理单位的。awk每接收文件的一行，然后执行相应的命令，来处理文本。
+
+调用awk
+有三种方式调用awk
+
+ 
+1.命令行方式
+awk [-F  field-separator]  'commands'  input-file(s)
+其中，commands 是真正awk命令，[-F域分隔符]是可选的。 input-file(s) 是待处理的文件。
+在awk中，文件的每一行中，由域分隔符分开的每一项称为一个域。通常，在不指名-F域分隔符的情况下，默认的域分隔符是空格。
+
+2.shell脚本方式
+将所有的awk命令插入一个文件，并使awk程序可执行，然后awk命令解释器作为脚本的首行，一遍通过键入脚本名称来调用。
+相当于shell脚本首行的：#!/bin/bash
+可以换成：#!/bin/awk
+
+3.将所有的awk命令插入一个单独文件，然后调用：
+awk -f awk-script-file input-file(s)
+其中，-f选项加载awk-script-file中的awk脚本，input-file(s)跟上面的是一样的。
+ 
+ 本章重点介绍命令行方式。
+
+ 
+
+入门实例
+假设last -n 5的输出如下
+
+[root@www ~]# last -n 5 <==仅取出前五行
+root     pts/1   192.168.1.100  Tue Feb 10 11:21   still logged in
+root     pts/1   192.168.1.100  Tue Feb 10 00:46 - 02:28  (01:41)
+root     pts/1   192.168.1.100  Mon Feb  9 11:41 - 18:30  (06:48)
+dmtsai   pts/1   192.168.1.100  Mon Feb  9 11:41 - 11:41  (00:00)
+root     tty1                   Fri Sep  5 14:09 - 14:10  (00:01)
+如果只是显示最近登录的5个帐号
+
+#last -n 5 | awk  '{print $1}'
+root
+root
+root
+dmtsai
+root
+awk工作流程是这样的：读入有'\n'换行符分割的一条记录，然后将记录按指定的域分隔符划分域，填充域，$0则表示所有域,$1表示第一个域,$n表示第n个域。默认域分隔符是"空白键" 或 "[tab]键",所以$1表示登录用户，$3表示登录用户ip,以此类推。
+
+ 
+
+如果只是显示/etc/passwd的账户
+
+#cat /etc/passwd |awk  -F ':'  '{print $1}'  
+root
+daemon
+bin
+sys
+这种是awk+action的示例，每行都会执行action{print $1}。
+
+-F指定域分隔符为':'。
+
+ 
+
+如果只是显示/etc/passwd的账户和账户对应的shell,而账户与shell之间以tab键分割
+
+#cat /etc/passwd |awk  -F ':'  '{print $1"\t"$7}'
+root    /bin/bash
+daemon  /bin/sh
+bin     /bin/sh
+sys     /bin/sh
+ 
+
+如果只是显示/etc/passwd的账户和账户对应的shell,而账户与shell之间以逗号分割,而且在所有行添加列名name,shell,在最后一行添加"blue,/bin/nosh"。
+
+ 
+cat /etc/passwd |awk  -F ':'  'BEGIN {print "name,shell"}  {print $1","$7} END {print "blue,/bin/nosh"}'
+name,shell
+root,/bin/bash
+daemon,/bin/sh
+bin,/bin/sh
+sys,/bin/sh
+....
+blue,/bin/nosh
+ 
+awk工作流程是这样的：先执行BEGIN，然后读取文件，读入有/n换行符分割的一条记录，然后将记录按指定的域分隔符划分域，填充域，$0则表示所有域,$1表示第一个域,$n表示第n个域,随后开始执行模式所对应的动作action。接着开始读入第二条记录······直到所有的记录都读完，最后执行END操作。
+
+搜索/etc/passwd有root关键字的所有行
+
+#awk -F: '/root/' /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+这种是pattern的使用示例，匹配了pattern(这里是root)的行才会执行action(没有指定action，默认输出每行的内容)。
+
+搜索支持正则，例如找root开头的: awk -F: '/^root/' /etc/passwd
+
+ 
+
+搜索/etc/passwd有root关键字的所有行，并显示对应的shell
+
+# awk -F: '/root/{print $7}' /etc/passwd             
+/bin/bash
+ 这里指定了action{print $7}
+
+ 
+
+awk内置变量
+awk有许多内置变量用来设置环境信息，这些变量可以被改变，下面给出了最常用的一些变量。
+
+ 
+ARGC               命令行参数个数
+ARGV               命令行参数排列
+ENVIRON            支持队列中系统环境变量的使用
+FILENAME           awk浏览的文件名
+FNR                浏览文件的记录数
+FS                 设置输入域分隔符，等价于命令行 -F选项
+NF                 浏览记录的域的个数
+NR                 已读的记录数
+OFS                输出域分隔符
+ORS                输出记录分隔符
+RS                 控制记录分隔符
+ 
+ 此外,$0变量是指整条记录。$1表示当前行的第一个域,$2表示当前行的第二个域,......以此类推。
+
+统计/etc/passwd:文件名，每行的行号，每行的列数，对应的完整行内容:
+
+#awk  -F ':'  '{print "filename:" FILENAME ",linenumber:" NR ",columns:" NF ",linecontent:"$0}' /etc/passwd
+filename:/etc/passwd,linenumber:1,columns:7,linecontent:root:x:0:0:root:/root:/bin/bash
+filename:/etc/passwd,linenumber:2,columns:7,linecontent:daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+filename:/etc/passwd,linenumber:3,columns:7,linecontent:bin:x:2:2:bin:/bin:/bin/sh
+filename:/etc/passwd,linenumber:4,columns:7,linecontent:sys:x:3:3:sys:/dev:/bin/sh
+ 
+
+使用printf替代print,可以让代码更加简洁，易读
+
+ awk  -F ':'  '{printf("filename:%s,linenumber:%s,columns:%s,linecontent:%s\n",FILENAME,NR,NF,$0)}' /etc/passwd
+ 
+
+print和printf
+awk中同时提供了print和printf两种打印输出的函数。
+
+其中print函数的参数可以是变量、数值或者字符串。字符串必须用双引号引用，参数用逗号分隔。如果没有逗号，参数就串联在一起而无法区分。这里，逗号的作用与输出文件的分隔符的作用是一样的，只是后者是空格而已。
+
+printf函数，其用法和c语言中printf基本相似,可以格式化字符串,输出复杂时，printf更加好用，代码更易懂。
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+ awk编程
+ 变量和赋值
+
+除了awk的内置变量，awk还可以自定义变量。
+
+下面统计/etc/passwd的账户人数
+
+awk '{count++;print $0;} END{print "user count is ", count}' /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+......
+user count is  40
+count是自定义变量。之前的action{}里都是只有一个print,其实print只是一个语句，而action{}可以有多个语句，以;号隔开。
+
+ 
+
+这里没有初始化count，虽然默认是0，但是妥当的做法还是初始化为0:
+
+awk 'BEGIN {count=0;print "[start]user count is ", count} {count=count+1;print $0;} END{print "[end]user count is ", count}' /etc/passwd
+[start]user count is  0
+root:x:0:0:root:/root:/bin/bash
+...
+[end]user count is  40
+ 
+
+统计某个文件夹下的文件占用的字节数
+
+ls -l |awk 'BEGIN {size=0;} {size=size+$5;} END{print "[end]size is ", size}'
+[end]size is  8657198
+ 
+
+如果以M为单位显示:
+
+ls -l |awk 'BEGIN {size=0;} {size=size+$5;} END{print "[end]size is ", size/1024/1024,"M"}' 
+[end]size is  8.25889 M
+注意，统计不包括文件夹的子目录。
+
+ 
+
+条件语句
+
+ awk中的条件语句是从C语言中借鉴来的，见如下声明方式：
+
+ 
+if (expression) {
+    statement;
+    statement;
+    ... ...
+}
+
+if (expression) {
+    statement;
+} else {
+    statement2;
+}
+
+if (expression) {
+    statement1;
+} else if (expression1) {
+    statement2;
+} else {
+    statement3;
+}
+ 
+
+统计某个文件夹下的文件占用的字节数,过滤4096大小的文件(一般都是文件夹):
+
+ls -l |awk 'BEGIN {size=0;print "[start]size is ", size} {if($5!=4096){size=size+$5;}} END{print "[end]size is ", size/1024/1024,"M"}' 
+[end]size is  8.22339 M
+ 
+
+循环语句
+
+awk中的循环语句同样借鉴于C语言，支持while、do/while、for、break、continue，这些关键字的语义和C语言中的语义完全相同。
+
+数组
+
+  因为awk中数组的下标可以是数字和字母，数组的下标通常被称为关键字(key)。值和关键字都存储在内部的一张针对key/value应用hash的表格里。由于hash不是顺序存储，因此在显示数组内容时会发现，它们并不是按照你预料的顺序显示出来的。数组和变量一样，都是在使用时自动创建的，awk也同样会自动判断其存储的是数字还是字符串。一般而言，awk中的数组用来从记录中收集信息，可以用于计算总和、统计单词以及跟踪模板被匹配的次数等等。
+
+显示/etc/passwd的账户
+
+ 
+awk -F ':' 'BEGIN {count=0;} {name[count] = $1;count++;}; END{for (i = 0; i < NR; i++) print i, name[i]}' /etc/passwd
+0 root
+1 daemon
+2 bin
+3 sys
+4 sync
+5 games
+......
+ 
+这里使用for循环遍历数组
+求uid的和
+cat /etc/passwd|awk -F ':' '{sum+=$4} END {print "Sum = ", sum}'
+求uid的平均数
+cat /etc/passwd | awk -F ':' '{sum+=$4} END {print "Average = ", sum/NR}'
+求uid的最大值
+cat /etc/passwd | awk -F: '{m=m>$4?m:$4} END {print m}' 
+
+shell编程
+什么是shell脚本编程
+shell是一个由C语言编写的，shell既是一种语言也是一种命令，他是用户和linux沟通的桥梁，shell脚本（shell script）是一种为shell编写的脚本程序，他啊可以理解为一个可执行的linux命令的集合。
+
+
+shell解释器
+shell编程和java、php等语言一样，只需要一个文本编辑器和一个解释器即可。
+
+常见shell非常多，
+bourne shell  /bin/sh
+c shell    /usr/bin/csh
+bourne again shell  /bin/bash
+k shell    /usr/bin/ksh
+shell for root  /sbin/sh
+
+linux自带的是：/bin/sh /bin/bash /sbin/sh,以上几种都是交互式。
+bash是易用和免费的，bash在日常工作中被广泛使用。
+bash也是大部分的linux系统默认的shell。
+
+查看linux系统安装的shell：
+cat /etc/shells
+
+简单案例：
+hello.sh
+
+#!/bin/bash
+echo "hello china"
+
+
+执行shell脚本：
+sh hello.sh
+
+chmod u+x hello.sh
+./hello.sh
+
+##!/bin/bash ##表示用哪一种shell解释器来解释执行咱们的脚本程序
+可以删除该行，哪shell脚本将使用linux默认的解释器来执行
+如果是使用其他的编译型语言解释，则必须加上该行
+
+bash 
+
+shell变量
+linux shell的变量分为系统变量和用户自定义变量
+
+变量可以使用set查看
+
+
+int i=1
+高级语言才是强类型的语言，编译型语言是弱类型的，不需要定义类型
+
+A=1
+echo $A
+A=HELLO
+A=HELLO WORLD
+
+A="HELLO WORLD"
+
+想打印"HELLO WORLDs is strong"
+
+echo "$As is strong"
+
+echo $A"s is strong"
+
+echo "${A}s is strong"
+
+echo '${A}s is strong'
+
+双引号和单引号的区别：
+双引号仅将空格脱意
+单引号会将变量引用${A}脱意
+
+
+变量撤销：
+unset A
+
+只读：不可改变，相当于java中用final修饰
+readonly B=2
+
+只读的变量不可修改，不可撤销
+
+
+程序的执行空间
+vi a.sh
+#!/bin/bash
+a="a is in a.sh"
+echo $a
+/root/scripts/b.sh
+
+vi b.sh
+#!/bin/bash
+b="b is in b.sh"
+echo $b
+echo $a
+
+变量提升为当前shell进程中的全局变量
+vi a.sh
+#!/bin/bash
+export a="a is in a.sh"
+echo $a
+/root/scripts/b.sh
+
+脚本在叫用着所在的bash进程去执行
+vi a.sh
+#!/bin/bash
+export a="a is in a.sh"
+echo $a
+. /root/scripts/b.sh
+
+
+
+export a ：可以把变量提升为当前shell进程中的全局变量，可供其他子shell进程调用
+
+其他两种方式：
+. /root/script/b.sh          ###注意 . 的用法
+source /root/script/b.sh
+
+
+总结：
+1、a.sh总直接调用b.sh，会让b.sh在a所在的bash空间去创建一个子空间来执行b脚本
+2、子空间只能访问父空间用export提升过的变量
+3、一个shell进程无法将自己定义的变量提升到父空间中
+4、"."号执行脚本时，会让脚本在叫用着所在的bash进程去执行
+
+变量赋值：
+ls  显示 a.sh b.sh c.sh
+A="a.sh b.sh c.sh"
+执行一个命令或者脚本，将执行结果赋值给变量（执行之前不确定，无法赋值）
+反引号赋值：
+A=`date`
+A=`ls -l /`
+A=$(ls -al)与反引号赋值结果一样
+
+
+shell的特殊的变量：
+$?：表示上一个命令的返回状态（0-255）
+ls 
+echo $?
+
+$$：当前进程编号,也就是代表所在命令的PID
+$0：表示当前脚本名称
+$n:表示第n个参数(执行脚本有可能要从外面获取参数 touch /a.txt /b.txt ./c.txt)
+当n为0时表示脚本的文件名，如果n大于9，用大括号括起来like${10}.
+
+$#：表示参数的个数，常用于循环
+
+vi a.txt
+#!/bin/bash
+echo "$#"
+
+
+. d.txt
+
+. d.sh 1 2 3
+
+#!/bin/bash
+#Example
+if [ $# -ne 2 ];then
+    echo "Error, please enter two parameters."
+    exit 1
+else
+    echo "very well."
+fi
+
+
+$@ $*：参数列表，不确定参数的个数，可以直接使用这两个命令
+$@和$*的区别：
+这两个命令都是表示传递给函数的参数列表，不被双引号包含时，都是以$1 $2 $3 …… $n的形式输出所有的参数
+当他们被双引号包含时：
+"$*"会将所有的参数做为一个整体，以"$1 $2 $3 …… $n"的形式输出参数
+"$@"会将各个参数分开，以"$1" "$2"……"$n"的形式输出参数
+
+vi p.sh 
+
+#!/bin/bash
+for i in $@
+do
+echo $i
+done
+echo "-------------------"
+for i in "$@"
+do
+echo $i
+done
+echo "-------------------"
+for i in $*
+do
+echo $i
+done
+echo "-------------------"
+for i in "$*"
+do
+echo $i
+done
+
+
+
+shell运算符
+1、用expr
+格式：expr m + n 或者 $((m+n))。注意：expr运算符中间必须有空格
+s=(2 + 3) * 4 不加引号报错  s="(2 + 3) * 4" 加引号表示一个字符串
+例如：(2 + 3) * 4的值
+分步：
+	S=`expr 2 + 3`
+	S=`expr $S \* 4`
+
+合并处理：
+				和      转义
+	S=`expr `expr 2 + 3` \* 4`
+	S=`expr \`expr 2 + 3\` \* 4`
+	
+用(())
+((1+2))
+(((2+3)*4))
+
+当需要取得结算结果时，需要用$引用
+S=$(((2+3)*4))  ((2+3)*4)临时变量，$(((2+3)*4))获取，
+
+命令行输入
+count=1
+((count++))
+
+用$[]
+S=$[(1+2)*5]
+
+用let
+i=1
+let i++
+let i=i+2

@@ -1,0 +1,316 @@
+hive的serde
+serialize:序列化
+deserialize：反序列化
+
+文件的读取/解析的方式：[row format delimited ] hive 使用了两个类去读数据，
+一个类用于从文件中读取一条一条的数据（可能是一行，也可能是多行，比如说xml文件中的一个完整的标签）
+一个类从上面读取的记录中切分出一个又一个的字段（可以是简单按照分隔符切分，也可是对复杂结构自定义切分）
+row format ：用什么inputformat去读取数据 delimited：表示默认用普通的TextInputFormat去读取数据，以回车符作为行分隔符
+Fieds terminated by ',' :表示用什么样的serde类去解析这一行中的数据，默认使用的是：org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+
+常用的serde:csv\tsv\json serde\regexp serde等
+csv：默认逗号分隔符
+tsv:tab分隔符
+json：json格式的数据
+regexp:数据需要符合正则表达式
+
+1、csv 创建表
+
+create table if not exists csv1(
+uid int,
+unmae string,
+sex string
+)
+row format serde 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+stored as textfile
+;
+
+
+可以使用with serdeproperties指定字段分隔符，字段内容引用，转义符
+create table if not exists csv2(
+uid int,
+unmae string,
+sex string
+)
+row format serde 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+with serdeproperties
+("separatorChar"=",",
+"qutoeChar"="'",
+"escapeChar"="\\")
+stored as textfile
+;
+
+
+json serde:
+{"uid":1,"uname":"gyy","age":"38"}
+我们可以使用第三方的jar包或者自己写。
+无论自己写或者使用第三方的json serde 需要先加载jar包
+1、上传jar包并加载jar包
+add jar /root/json-serde-1.3-jar-with-dependencies.jar;
+2、创建表映射json数据
+create table if not exists json1(
+uid int,
+uname string,
+age int
+)
+row format serde 'org.openx.data.jsonserde.JsonSerDe' 
+stored as textfile
+;
+
+load data local inpath '/root/json.txt' into table json1;
+
+数据：
+laocao chinese:98,99,100,math:98,99,100,english:98,99,100
+将数据构造成json串
+{"uname":"laocao","score":{"chinese":"[98,99,100]","math":"[98,99,100]","english":"[98,99,100]"}}
+
+建表
+create table if not exists complex(
+uname string,
+score map<String,array<int>>
+)
+row format serde 'org.openx.data.jsonserde.JsonSerDe' 
+;
+加载数据
+load data local inpath '/root/complex.txt' into table complex;
+
+想查询第一次数学成绩大于90分的人的信息
+
+select * 
+from complex
+where 
+score["math"][1]>90
+;
+
+regex serde :hive对文件中的字段默认情况下只支持单字节分隔符，如果数据文件中的分隔符是多字符的
+01||zhangsan
+02||lisi
+
+create table if not exists t_b(
+id int,
+uname string
+)
+row format delimited
+fields terminated by '||'
+;
+
+
+create table if not exists t_bi(
+id int,
+uname string
+)
+row format serde
+'org.apache.hadoop.hive.serde2.RegexSerDe'
+with serdeproperties(
+'input.regex'='(.*)\\|\\|(.*)',
+'output.format.string'='%1$s %2$s'
+)
+;
+
+load data local inpath '/root/bi.txt' into table t_bi;
+
+
+通过inputformat解决特殊行分隔符的问题
+
+create table if not exists t_bi_reg(
+id int,
+uname string 
+)
+row format delimited fields
+terminated by '|'
+STORED AS INPUTFORMAT
+  'inputformat.BiDelimiterInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+;
+
+
+01||zhangsan
+
+01,zhangsan
+
+
+hive 的存储格式
+默认存储格式textfile
+textfile:普通的文本文件存储，不压缩
+sequencefile:hive为用户提供的二进制存储，本身就压缩，不能使用load的方式加载数据
+rcfile:hive提供的行列混合存储，hive在该格式下，会尽量将附近的行和列得块存储到一起，仍然是压缩格式，查询效率比较高
+orc:orf是rcfile的升级版
+
+create table if not exists text2(
+uid int,
+uname string,
+sex string,
+age int,
+step string
+)
+row format delimited
+fields terminated by ','
+stored as textfile
+;
+
+load data local inpath '/root/students.txt' into table text2;
+
+创建存储格式为sequencefile的
+
+create table if not exists seq1(
+uid int,
+uname string,
+sex string,
+age int,
+step string
+)
+row format delimited
+fields terminated by ','
+stored as sequencefile
+;
+
+不可以使用这种方式加载数据
+load data local inpath '/root/students.txt' into table seq1;
+
+应该使用insert into的方式加载数据
+insert into seq1
+select * from text2;
+
+rcfile 
+create table if not exists rc1(
+uid int,
+uname string,
+sex string,
+age int,
+step string
+)
+row format delimited
+fields terminated by ','
+stored as rcfile
+;
+
+不可以使用这种方式加载数据
+load data local inpath '/root/students.txt' into table rc1;
+
+应该使用insert into的方式加载数据
+insert into rc1
+select * from text2;
+
+自定义存储格式
+
+seq_yd源数据文件
+aSBsb3ZlIHlvdQ==
+aSBsb3ZlIHlvdSB0b28=
+
+解密后的数据
+i love you 
+i love you too
+
+create table if not exists bs1(
+str string
+)
+stored as 
+inputformat 'org.apache.hadoop.hive.contrib.fileformat.base64.Base64TextInputFormat'
+outputformat 'org.apache.hadoop.hive.contrib.fileformat.base64.Base64TextOutputFormat'
+;
+
+
+
+hive的索引：
+索引是数据库的一种标准技术，hive在0.7版本以后支持索引，只不过hive的索引的性能要比关系型数据库的差
+优点：提高查询效率，避免全表扫描
+缺点：冗余存储，加载数据较慢
+索引文件的特点：索引数据有序，并且数据量较小
+
+索引的参数（关键字）index 
+如何创建一个索引
+create table if not exists text3
+as 
+select * from text2
+;
+
+
+create index id_idx
+on table text3(uid)
+as 'compact' //数据文件的存储格式
+with deferred rebuild//索引文件能够重建
+；
+
+select count(1) from text2;
+
+
+select count(1) from text3;
+
+
+create index id_idx
+on table text3(uid)
+as 'compact' 
+with deferred rebuild
+;
+
+select * from text2 where uid=50010;
+
+select * from text3 where uid=50010;
+
+
+修改索引
+alter index id_idx
+on text3 rebuild
+;
+
+查看索引
+show index on text3;
+
+创建联合索引
+create index id_idx_uid_uname 
+on table text3(uid,uname)
+as 'bitmap'
+with deferred rebuild
+;
+
+
+select * from text2 where uid=95010 and uname like '%小涛';
+select * from text3 where uid=95010 and uname like '%小涛';
+
+删除索引
+drop index id_idx on text3;
+
+视图
+hive的视图简单理解为逻辑上的表
+hive现目前只支持逻辑视图，不支持物化视图
+1、对数据进行局部暴露(涉及隐私的数据不暴露)
+2、简化复杂查询
+
+创建视图
+create view if  not exists v_1
+as 
+select uid,uname from text3 where uid < 95010
+;
+
+查看视图
+show tables;
+show create table v_1;
+desc v_1;
+
+视图没有必要克隆
+视图的修改：可以去修改元数据
+
+删除视图
+drop view if exists v_1;
+
+注意：
+切忌先删除视图所依赖的表，再去查询视图
+视图不能使用insert into或者load方式加载数据
+视图是只读的，不能修改器解构、相关的属性
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

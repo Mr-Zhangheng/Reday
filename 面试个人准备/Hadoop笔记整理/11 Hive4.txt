@@ -1,0 +1,403 @@
+hive的函数
+窗口函数中的排名函数
+row_number:没有并列，相同名次顺序排  
+rank():有并列，相同名次空位
+dense_rank:有并列相同名次不空位
+ 
+uid class,score
+1,gp1917,90    
+2,gp1917,89 
+3,gp1917,89
+4,gp1917,90 
+5,gp1917,74 
+6,gp1917,98 
+7,gp1917,88 
+8,gp1917,78
+9,gp1917,67
+10,gp1918,94
+11,gp1918,96
+12,gp1918,93
+13,gp1918,96
+14,gp1918,80
+15,gp1918,81
+16,gp1918,82
+17,gp1918,83
+18,gp1918,84
+19,gp1918,85
+20,gp1918,86
+21,gp1919,99
+22,gp1919,91
+23,gp1919,96
+24,gp1919,99
+25,gp1919,93
+26,gp1919,97
+27,gp1919,89 
+28,gp1919,79
+29,gp1919,94
+30,gp1919,89
+
+
+create table if not exists rstu(
+uid int,
+class string,
+score int
+)
+row format delimited 
+fields terminated by ' '
+;
+
+load data local inpath '/root/rstu.txt' into table rstu;
+
+
+查询每个班级考试成绩前三名
+思路：班级相同的分到同一个组中，组内排序取前三名，再将结果聚合在一起
+使用 over()开窗
+distribute by 分组
+sort by 排序
+
+select *,
+row_number() over(distribute by class sort by score desc) rm,
+rank() over(distribute by class sort by score desc) rk,
+dense_rank() over(distribute by class sort by score desc) drk
+from rstu
+;
+row_number:没有并列，相同名次顺序排  
+rank():有并列，相同名次空位
+dense_rank:有并列相同名次不空位
+
+select a.*
+from
+(select *,
+row_number() over(distribute by class sort by score desc) rm
+from rstu) a
+where a.rm<4
+;
+
+
+可以使用partition by 代替distribute by ,但是需要用order by 排序
+select *,
+row_number() over(partition by class order by score desc) rm,
+rank() over(distribute by class sort by score desc) rk,
+dense_rank() over(distribute by class sort by score desc) drk
+from rstu
+;
+
+
+2019-03-30      冯鹏    97
+2019-03-30      司翔    96
+2019-03-30      廉德枫  95
+2019-03-30      王鑫    94
+2019-03-30      胡浩洋  93
+2019-03-30      刘浩（小）      93
+2019-03-30      孙湘钦  93
+2019-03-30      霍鹏飞  93
+2019-03-30      毕传鑫  93
+2019-03-30      韩冬    92
+2019-03-30      刘旭    92
+2019-03-30      杨佳星  92
+2019-03-30      马关军  90
+2019-03-30      葛军    90
+2019-03-30      李晶辉  90
+2019-03-30      王钊    89
+2019-03-30      夏军    88
+2019-03-30      施胜秋  88
+2019-03-30      刘浩（大）      88
+2019-03-30      任荣    88
+2019-03-30      高亚楠  87
+2019-03-30      齐承博  87
+2019-03-30      孙洁    86
+2019-03-30      路建才  86
+2019-03-30      杜颢    86
+2019-03-30      刘增辉  86
+2019-03-30      冯惠臣  86
+2019-03-30      李壮壮  85
+2019-03-30      丁金辉  85
+2019-03-30      李超然  85
+2019-03-30      史昌盛  85
+2019-03-30      曹猛    85
+2019-03-30      唐晓康  85
+2019-03-30      吴逸男  85
+2019-03-30      戴晓浩  83
+2019-03-30      杨航天  83
+2019-03-30      胡剑峰  82
+2019-03-30      刘秀杰  81
+2019-03-30      段元淳  80
+2019-03-30      宋振玺  78
+2019-03-30      丁利飞  78
+2019-03-30      陈鹏    76
+2019-03-30      黄嵩    75
+2019-03-30      王留香  74
+2019-03-30      暴志鹏  73
+2019-03-30      陶尧尧  70
+2019-03-30      周志舵  61
+2019-03-30      孔祥托  60
+2019-03-23      胡浩洋  98
+2019-03-23      司翔    98
+2019-03-23      孙洁    98
+2019-03-23      夏军    98
+2019-03-23      高亚楠  96
+2019-03-23      王鑫    95
+2019-03-23      王钊    95
+2019-03-23      戴晓浩  94
+2019-03-23      路建才  94
+2019-03-23      史翼璇  94
+2019-03-23      杜颢    93
+2019-03-23      冯鹏    93
+2019-03-23      刘浩（小）      93
+2019-03-23      孙湘钦  93
+2019-03-23      霍鹏飞  92
+2019-03-23      李壮壮  92
+2019-03-23      丁金辉  91
+2019-03-23      韩冬    91
+2019-03-23      李超然  91
+2019-03-23      史昌盛  91
+2019-03-23      段元淳  90
+2019-03-23      胡剑峰  90
+2019-03-23      陈鹏    89
+2019-03-23      施胜秋  88
+2019-03-23      王留香  88
+2019-03-23      毕传鑫  87
+2019-03-23      曹猛    86
+2019-03-23      廉德枫  86
+2019-03-23      刘浩（大）      86
+2019-03-23      马关军  86
+2019-03-23      齐承博  86
+2019-03-23      唐晓康  86
+2019-03-23      刘旭    85
+2019-03-23      周志舵  84
+2019-03-23      葛军    83
+2019-03-23      宋振玺  83
+2019-03-23      刘增辉  82
+2019-03-23      黄嵩    80
+2019-03-23      孔祥托  80
+2019-03-23      任荣    80
+2019-03-23      吴逸男  79
+2019-03-23      杨佳星  78
+2019-03-23      暴志鹏  76
+2019-03-23      丁利飞  76
+2019-03-23      李晶辉  76
+2019-03-23      杨航天  76
+2019-03-23      冯惠臣  73
+2019-03-23      刘秀杰  73
+
+
+create table if not exists stu_score(
+dt string,
+name string,
+score int
+)
+row format delimited
+fields terminated by '\t'
+;
+
+load data local inpath '/root/stu_score.txt' into table stu_score;
+
+需求：求每次考试的最高分和最低分
+select 
+dt,
+max(score) as maxscore,
+min(score) as minscore
+from stu_score
+group by dt
+;
+
+需求：每次考试每位学员的成绩与最高成绩的差值
+
+张三 79 99
+李四 89 99
+王五 98 99
+
+select *
+from stu_score a 
+join
+(select 
+dt,
+max(score) as maxscore,
+min(score) as minscore
+from stu_score
+group by dt
+) b 
+on b.dt=a.dt
+;
+
+select 
+dt,
+name,
+score,
+max(score) over(distribute by dt sort by score desc) maxscore
+from stu_score
+;
+
+
+结果和我们想象的有差别
+窗口范围的问题，默认的窗口范围是起始行到当前行
+select 
+dt,
+name,
+score,
+min(score) over(distribute by dt sort by score ) minscore
+from stu_score
+;
+
+
+取数据的第一个版本和最近一个版本
+first_value
+last_value
+
+取学员的第一次的考试成绩和最后一次考试成绩
+
+
+需求：每次考试每位学员的成绩与最高成绩的差值
+select 
+dt,
+name,
+score,
+first_value(score) over(distribute by dt sort by score desc) maxscore,
+last_value(score) over(distribute by dt sort by score asc) minscore
+from stu_score
+;
+
+
+last_value:默认行的范围从第一行到当前行，如果要让屈指范围是所有分组数据，则需要指定窗口范围
+rows between unbounded preceding and unbounded following
+
+
+select 
+dt,
+name,
+score,
+first_value(score) over(distribute by dt sort by score desc) maxscore,
+last_value(score) over(distribute by dt sort by score desc rows between unbounded preceding and unbounded following) minscore
+from stu_score
+;
+
+
+需求：求每位学员的每次考试的成绩与上一次成绩的对比
+考试时间    姓名 本次成绩   上次成绩
+2019-01-01 张三  59 		58
+2019-01-02 张三  60 		59
+
+lag()  取出前n行的数据
+lead() 取出后n行的数据
+
+select
+dt,
+name,
+score,
+lag(score,1) over(distribute by name sort by dt asc) as upscore
+from stu_score
+;
+
+dt id url
+
+
+2019-4-1 11:09:20 1 www.baidu.com
+2019-4-1 11:10:20 1 www.baidu.com
+2019-4-1 11:11:20 1 www.baidu.com
+.......
+
+需求：求出5分钟内访问次数达到100次的用户
+
+现在是100次访问，拿到第一次访问的数据，两个数据时间相减小于5分钟
+select
+id,
+dt,
+lag(dt,100) over (distribute by id sort by dt asc) as dt_100
+;
+
+1 11:09:20 10:59:23
+
+
+
+
+
+自定义函数：内置函数无法满足所有的业务场景
+hive提供了许多模块的自定义功能。比如serde,自定义函数、输入输出格式等
+常见的自定义函数
+UDF：user defined function
+UDTF:user defined table-generate function ,一对多的输入输出(explode)
+UDAF：user defined agregation function，用户自定义聚合函数
+
+编写UDF的方式：
+1、继承UDF类、重写evaluate方法,允许重载
+2、继承geniricUDF，重写intilizer()、getDispay()、evaluate()
+
+实现小写转大写
+
+先加入依赖
+<!-- https://mvnrepository.com/artifact/org.apache.hive/hive-exec -->
+<dependency>
+    <groupId>org.apache.hive</groupId>
+    <artifactId>hive-exec</artifactId>
+    <version>1.2.1</version>
+</dependency>
+
+
+第一种：(只对当前session有效)
+1、将编写好的UDF打包并上传到服务器，并将jar包添加到hive的class path中
+hive> add jar /root/mr_demo-1.0.jar;
+2、创建一个自定义的临时函数名
+hive>create temporary function myUpper as 'hiveudf.FirstUDF';
+3、测试
+show functions
+4、select myupper('a');
+
+第二种方式
+1、将编写好的UDF打包并上传到服务器
+2、写一个配置文件，将以下语句写入配置文件中
+vi /root/hive-init
+add jar /root/mr_demo-1.0.jar;
+create temporary function myUpper1 as 'hiveudf.FirstUDF';
+3、启动hive的时候指定启动配置
+hive -i /root/hive-init
+
+第三种方式：
+1、将编写好的UDF打包并上传到服务器
+2、在hive的安装目录下的bin目录下，创建一个文件，文件名字hiverc
+将以下内容加入进来
+add jar /root/mr_demo-1.0.jar;
+create temporary function upp as 'hiveudf.FirstUDF';
+3、启动hive
+
+第四种方式：
+编译源码：
+1)将写好的Jave文件拷贝到~/install/hive-0.8.1/src/ql/src/java/org/apache/hadoop/hive/ql/udf/ 
+cd  ~/install/hive-0.8.1/src/ql/src/java/org/apache/hadoop/hive/ql/udf/
+ls -lhgt |head
+2)修改~/install/hive-0.8.1/src/ql/src/java/org/apache/hadoop/hive/ql/exec/FunctionRegistry.java，增加import和RegisterUDF
+
+import com.meilishuo.hive.udf.UDFIp2Long;   //添加import
+
+registerUDF("ip2long", UDFIp2Long.class, false); //添加register
+3)在~/install/hive-0.8.1/src下运行ant -Dhadoop.version=1.0.1 package
+cd ~/install/hive-0.8.1/src
+ant -Dhadoop.version=1.0.1 package
+4)替换exec的jar包，新生成的包在/hive-0.8.1/src/build/ql目录下,替换链接    
+cp hive-exec-0.8.1.jar /hadoop/hive/lib/hive-exec-0.8.1.jar.0628
+rm hive-exec-0.8.1.jar
+ln -s hive-exec-0.8.1.jar.0628 hive-exec-0.8.1.jar
+5)重启进行测试
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,284 @@
+event事件中category和action分组的个数
+
+分析的数据是en = e_e
+
+订单事件：支付、退款、换货
+购买事件：预定、加入购物车
+
+基础维度类
+EventDimension
+String id;
+String category;
+String action;
+
+封装key StatsEventDimension 
+EventDimension
+StatsCommonDimension
+
+service服务
+加入通过事件维度对象获取事件维度ID的方法
+
+把sql语句写入到配置文件中，把对应的赋值类的类名写到配置文件中
+EventWriter实现接口 给ps语句赋值的类
+
+
+使用HIVE分析
+
+1、把数据映射成一张表phone
+2、要创建外部表
+表中字段名和LogWritable属性名字一一对应,
+表中的关键字要用反引号括起来 eg: on是关键字
+要创建分区表 month day
+列的分隔符 ？ 使用默认的即可，因为LogWritable的toString()
+数据的存储格式: orc
+
+orc,rcfile等存储格式加载数据不能使用load
+先创建临时表phone_tmp，然后再从临时表中查数据插入到表phone中
+3、将数据加载进来
+4、写语句进行分析
+
+
+自定义函数
+s_time 时间戳 变成时间维度ID
+FROM_UNIXTIME :可以将以int类型存储11位的时间转换为"YYYY-MM-DD"显示
+写一个自定义函数，自定义函数的参数就是一个时间的字符串，通过这个时间的字符串获取时间维度ID
+平台名称 装换成平台维度ID
+事件变成 事件维度ID
+
+
+在HDFS上创建路径，将打好的jar包上传到这个路径下
+hdfs dfs -mkdir -p /phone/dfsjars
+hdfs dfs -put /data/gp1812_analysis-1.0.jar /phone/dfsjars
+
+在hive中执行
+先创建库phone
+create database phone;
+use phone;
+create function phone_date as 'com.phone.analysis.hive.event.DateDimensionUDF' using jar 'hdfs://hadoop01:8020/phone/dfsjars/gp1816_LogAnalysis-1.0.jar';
+create function phone_platform as 'com.phone.analysis.hive.event.PlatformDimensionUDF' using jar 'hdfs://hadoop01:8020/phone/dfsjars/gp1816_LogAnalysis-1.0.jar';
+create function phone_event as 'com.phone.analysis.hive.event.EventDimensionUDF' using jar 'hdfs://hadoop01:8020/phone/dfsjars/gp1816_LogAnalysis-1.0.jar';
+
+
+
+create function phone_event as 'com.phone.analysis.hive.EventDimensionUdf' using jar 'hdfs://hadoop01:8020/phone/udfjars/Gp15_LogAnalysis-1.0.jar';
+create function phone_date as 'com.phone.analysis.hive.DateDimensionUdf' using jar 'hdfs://hadoop01:8020/phone/udfjars/Gp15_LogAnalysis-1.0.jar';
+create function phone_platform as 'com.phone.analysis.hive.PlatformDimensionUdf' using jar 'hdfs://hadoop01:8020/phone/udfjars/Gp15_LogAnalysis-1.0.jar';
+创建临时表
+create external table if not exists phone_tmp(
+ver string,
+s_time string,
+en string,
+u_ud string,
+u_mid string,
+u_sd string,
+c_time string,
+l string,
+b_iev string,
+b_rst string,
+p_url string,
+p_ref string,
+tt string,
+pl string,
+ip String,
+oid String,
+`on` String,
+cua String,
+cut String,
+pt String,
+ca String,
+ac String,
+kv_ String,
+du String,
+browserName String,
+browserVersion String,
+osName String,
+osVersion String,
+country String,
+province String,
+city string
+)
+partitioned by(month string,day string)
+;
+加载数据，分区表加载数据时要指定分区
+load data inpath '/ods/11/11' into table phone_tmp partition(month=11,day=11);
+创建表分区表（外部表）
+create external table if not exists phone(
+ver string,
+s_time string,
+en string,
+u_ud string,
+u_mid string,
+u_sd string,
+c_time string,
+l string,
+b_iev string,
+b_rst string,
+p_url string,
+p_ref string,
+tt string,
+pl string,
+ip String,
+oid String,
+`on` String,
+cua String,
+cut String,
+pt String,
+ca String,
+ac String,
+kv_ String,
+du String,
+browserName String,
+browserVersion String,
+osName String,
+osVersion String,
+country String,
+province String,
+city string
+)
+partitioned by(month string,day string)
+stored as orc
+;
+
+将临时表中数据插入到phone表中
+insert into phone partition(month=11,day=11)
+select
+ver,
+s_time,
+en,
+u_ud,
+u_mid,
+u_sd,
+c_time,
+l,
+b_iev,
+b_rst,
+p_url,
+p_ref,
+tt,
+pl,
+ip,
+oid,
+`on`,
+cua,
+cut,
+pt,
+ca,
+ac,
+kv_,
+du,
+browserName,
+browserVersion,
+osName,
+osVersion,
+country,
+province,
+city
+from phone_tmp
+where month = 11
+and day = 11
+;
+
+
+执行速度慢：
+本地模式
+set hive.exec.mode.local.auto = true;
+分组产生数据倾斜怎么处理？
+set hive.groupby.skewindata = true;
+如果设置为true
+生成的查询计划会有两个job
+一个mr的job将map输出的结果集随机分配到reduce中，每个reduce再做聚合，输出结果
+第二个MR job处理第一个job处理后的结果进行group by
+
+select 
+FROM_UNIXTIME(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
+pl,
+ca,
+ac,
+count(*) as ct
+from 
+phone
+where 
+month = 11
+and 
+day = 11
+and 
+en = 'e_e'
+group by
+FROM_UNIXTIME(cast(s_time/1000 as bigint),'yyyy-MM-dd'),pl,ca,ac
+;
+
+select phone_platform(tmp.pl),phone_date(tmp.date),phone_event(tmp.ca,tmp.ac),tmp.ct,tmp.date
+from
+(select 
+FROM_UNIXTIME(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
+pl,
+ca,
+ac,
+count(*) as ct
+from 
+phone
+where 
+month = 11
+and 
+day = 11
+and 
+en = 'e_e'
+group by
+FROM_UNIXTIME(cast(s_time/1000 as bigint),'yyyy-MM-dd'),pl,ca,ac
+)tmp
+;
+
+
+
+insert overwrite table stats_event
+select phone_platform(tmp.pl),phone_date(tmp.date),phone_event(tmp.ca,tmp.ac),tmp.ct,tmp.date
+from
+(select 
+FROM_UNIXTIME(cast(s_time/1000 as bigint),'yyyy-MM-dd') as date,
+pl,
+ca,
+ac,
+count(*) as ct
+from 
+phone
+where 
+month = 11
+and 
+day = 11
+and 
+en = 'e_e'
+group by
+FROM_UNIXTIME(cast(s_time/1000 as bigint),'yyyy-MM-dd'),pl,ca,ac
+)tmp
+;
+
+5、创建一张结果表stats_event
+结果表应该与mysql中的结果表一致
+create table if not exists stats_event(
+platform_dimension_id int,
+date_dimension_id int,
+event_dimension_id int,
+times int,
+created string
+)
+;
+6、将分析结果插入到结果表中
+7、使用sqoop将结果表中数据导入mysql
+sqoop export \
+--connect jdbc:mysql://hadoop01:3306/result \
+--username hive \
+--password hive \
+--table stats_event \
+--export-dir hdfs://hadoop01:8020/user/hive/warehouse/qf.db/stats_event \
+--input-fields-terminated-by "\01" \
+--update-mode allowinsert \
+--update-key platform_dimension_id,date_dimension_id,event_dimension_id \
+;
+
+
+
+
+
+
+
+

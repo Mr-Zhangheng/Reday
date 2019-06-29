@@ -1,0 +1,562 @@
+一、表的属性的修改
+修改改名:rename to 
+alter table log_1  rename to log;
+修改字段名：change column(需要加上数据类型) 
+alter table log change column ip myip ##报错
+alter table log change column ip myip string;修改字段名
+alter table log change column myip ip int; 修改字段名并修改数据类型
+修改列的位置
+alter table log change column ip myip string comment 'this is ip ppp' first; ##放在第一个字段
+alter table log change column myip ip string after mac; ##放在某个字段的后面
+
+添加字段：add columns
+alter table log add columns (
+sex int ,
+age int 
+)
+; 
+替换字段：replace columns 相当于将之前的字段全部删除，重新添加新的
+alter table log replace columns(
+se int,
+lang int
+)
+;
+
+内部表和外部表的转换
+alter table uuu set tblproperties('EXTERNAL' = 'TRUE');
+
+alter table t1 set tblproperties('EXTERNAL' = 'true');
+##true一定要大写，小写不报错，但是不会进行修改
+
+alter table uuu set tblproperties('EXTERNAL' = 'FALSE');
+alter table log2 set tblproperties('EXTERNAL' = 'false');
+#false 大小写都可以，都会进行修改
+
+显示当前库：
+set hive.cli.print.current.db=true;
+显示头部信息
+set hive.cli.print.header=true;
+
+创建表
+create table if not exists test.stu(
+name string,
+age int
+)
+comment 'this is my table'
+row format delimited
+fields terminated  by ','
+lines terminated by '\n'
+stored as textfile
+;
+
+删除库（只能删除空库）
+drop database test;
+删除库（强制删除）
+drop database test cascade;
+
+删除表
+drop table log;
+
+二、hive分区
+1、为什么要分区
+随着系统的运行，数据量越来越大，而hive的查询时全表扫描，这样将会导致大量的不必要的数据扫描，从而查询效率低下。
+引进分区技术，避免全表扫描，提高查询效率。分区：partition
+可以将用户的整个表的数据划分成多个子目录（子目录以分区变量的值来命名）
+2、怎么分区
+通常使用年、月、日、地区等进行分区，具体和业务相关
+hive的分区和mysql的分区是有区别的
+
+hive的分区使用的表外字段
+mysql的分区使用的表内的字段
+
+[PARTITIONED BY (col_name data_type [COMMENT col_comment], ...)]
+
+1、hive的分区名不区分大小写
+2、hive分区的本质是在表对应的目录下面创建目录，分区字段是一个伪列，不存在数据中
+3、一张表中可以有一个或者多个分区，分区下面也可以有一个或者多个分区（多级分区的情况）
+create table stu1(
+name string,
+age int
+)
+partitioned by (province string)
+;
+
+load data local inpath '/etc/profile' into table stu1; ##加载报错，这是一个分区表，加载数据时要指定分区
+
+load data local inpath '/etc/profile' into table stu1 partition (province='beijing');为分区表加载数据
+
+3、分区的细节
+1、hive的分区名不区分大小写
+2、hive分区的本质是在表对应的目录下面创建目录，分区字段是一个伪列，不存在数据中
+3、一张表中可以有一个或者多个分区，分区下面也可以有一个或者多个分区（多级分区的情况）
+4、可以查询分区信息，但是我们的分区字段只存在于元数据中
+
+4、分区的操作
+创建一个一级分区
+create table if not exists day_part(
+uid int,
+uname string
+)
+partitioned by (year int)
+row format delimited 
+fields terminated by '\t'
+;
+
+load data local inpath '/root/day_part.txt' overwrite into table day_part partition (year=2017);
+load data local inpath '/root/day_part.txt' into table day_part partition (year=2018);
+
+查看分区
+show partitions day_part;
+
+select * from day_part where year=2017; 查询时指定分区，不必全表扫描
+
+alter table day_part change column uname uname string after uid;
+
+创建二级分区
+
+create table if not exists day_part1(
+uid int,
+uname string
+)
+partitioned by (year int,month int)
+row format delimited 
+fields terminated by '\t'
+;
+
+load data local inpath '/root/day_part.txt' overwrite into table day_part1 partition (year=2019,month=04);
+load data local inpath '/root/day_part.txt' overwrite into table day_part1 partition (year=2019,month=03);
+
+select * from day_part1 where year=2019 and month=04;
+
+创建三级分区
+create table if not exists day_part2(
+uid int,
+uname string
+)
+partitioned by (year int,month int,day int)
+row format delimited 
+fields terminated by '\t'
+;
+
+对分区进行操作：
+显示分区
+show partitions day_part1;
+
+新增分区
+alter table day_part1 add partition(year=2017,month=1);
+alter table day_part1 add partition(year=2017,month=2) partition(year=2017,month=3);
+新增分区并加载数据
+alter table day_part1 add partition(year=2017,month=10) location
+"/user/hive/warehouse/buc1"
+修改分区所对应的路径
+alter table day_part1 partition(year=2017,month=10) set location
+"hdfs://mini1:9000/user/hive/warehouse/log_1"  ##路径必须是绝对路径。从hdfs://mini1:9000开始
+
+删除分区
+alter table day_part1 drop partition (year=2017,month=1);
+show partitions day_part1;
+
+分区的类型：
+静态分区、动态分区、混合分区
+静态分区：新增分区或者是加载分区数据时指定分区名
+动态分区：新增分区或者是加载分区数据时,分区名未知。
+混合分区：静态分区和动态分区同时存在
+
+动态分区的举例：
+A表数据
+uid uname year month day
+1 zhangsan 2019 4 19
+2 lissi 2019 4 18
+
+B表是分区表，按照year month day进行分区
+
+从A表中查询数据插入到B表
+
+动态分区的相关属性：
+set hive.exec.dynamic.partition=true; ##允许动态分区
+set hive.exec.dynamic.partition.mode=strict ##分区模式的设定nostrict：strict(非严格模式：严格模式)
+严格模式：至少需要一个静态分区
+非严格模式：可以全是动态分区
+set  hive.exec.max.dynamic.partitions ##允许动态分区的最大数量
+set hive.exec.max.dynamic.partitions.pernode ##每个节点上允许的最大的动态分区的数量（也就是reducetask的数量）
+
+创建临时表
+create table if not exists tmp(
+uid int,
+commentid bigint,
+recommentid bigint,
+year int,
+month int,
+day int
+)
+row format delimited 
+fields terminated by '\t'
+;
+
+load data local inpath '/tmp.txt' overwrite into table tmp;
+
+
+创建动态分区表
+create table if not exists dyp1(
+uid int,
+commentid int,
+recommentid int
+)
+partitioned by(year int,month int,day int)
+row format delimited 
+fields terminated by '\t'
+;
+
+
+为混合分区加载数据
+insert into table dyp1 partition(year=2011,month,day)
+select uid,commentid,recommentid,month,day 
+from
+tmp
+;
+
+
+创建表
+create table if not exists dyp2(
+uid int,
+commentid int,
+recommentid int
+)
+partitioned by(year int,month int,day int)
+row format delimited 
+fields terminated by '\t'
+;
+
+为动态分区加载数据
+insert into table dyp2 partition(year,month,day)
+select uid,commentid,recommentid,year,month,day 
+from
+tmp
+;
+
+报错
+FAILED: SemanticException [Error 10096]: Dynamic partition strict mode requires at least one static partition column. To turn this off set hive.exec.dynamic.partition.mode=nonstrict
+
+解决
+set hive.exec.dynamic.partition.mode=nostrict
+
+
+hive提供一个严格模式：严格模式下会阻止三种查询
+1、对分区表查询时，where中过滤字段不是分区字段(避免全表扫描)
+select uid,commentid from dyp2 where recommentid >1000 这种查询不允许
+2、笛卡尔积的join查询，join语句不带on条件或者where条件
+select 
+u1.uid,
+u1.uname,
+l.logintime
+from 
+user u1 
+join 
+login l
+;
+
+下面的查询可以
+select 
+u1.uid,
+u1.uname,
+l.logintime
+from 
+user u1 
+join 
+login l
+where u1.uid = l.uid
+;
+
+3、对order by查询，有order by不带limit语句
+select 
+dyp2.uid,
+dyp2.commentid
+from dyp2
+order by
+dype2.uid
+limit 5
+;
+
+三、分桶
+单个分区或者表中的数据越来越大，分区不能细粒度的划分数据时，可以采用分桶去实现，
+分桶是将数据集分解为更容易管理的若干部分的另一种技术
+
+分桶的技术：
+CLUSTERED BY (col_name, col_name, ...) 
+   [SORTED BY (col_name [ASC|DESC], ...)] INTO num_buckets BUCKETS]
+  
+分桶的原理
+跟MR的hashpartitioner是一样的
+MR中：key的hash值模上reduce数量
+hive中：按照分桶字段的hash值模上分桶的个数
+hive也是针对某一列进行桶的组织，hive采用对列值进行hash,然后模上分桶的个数求余数决定记录存放在哪儿个桶中
+
+
+分桶的意义
+1、为了保存分桶查询的分桶结构（数据已经按照分桶字段进行了hash散列）
+2、分桶表进行抽样和join操作时可以提高MR的查询效率
+
+id   uname           id    orderid  
+1	张三1             1		 10
+2   张三2             2      13
+3   张三3             3      16
+4   张三4             4      19
+5   张三5             3      22
+6   张三6             6      25
+7   张三7             7      28
+8   张三8             8      31
+9   张三9             9      34
+
+分桶的操作
+create table t_stu(
+sno int,
+sname string,
+sex string,
+sage int,
+sdept string
+)
+row format delimited 
+fields terminated by ','
+stored as textfile
+;
+
+load data local inpath '/data/students.txt' into table t_stu;
+
+
+分桶查询
+select * from t_stu;
+
+
+select * from t_stu cluster by (sno);
+
+set mapreduce.job.reduces=4;
+
+select * from t_stu cluster by (sno); 负责分区还负责排序，排序字段就是分区字段
+
+select * from t_stu distribute by (sno) sort by (sage desc); 指定分区字段和排序字段，排序字段可和分区字段不一致，排序规则还可以指定
+
+创建分桶表并加载数据
+create table if not exists buc1(
+sno int,
+sname string,
+sex string,
+sage int,
+sdept string
+)
+clustered by (sno) sorted by (sage desc) into 4 buckets
+row format delimited 
+fields terminated by ','
+stored as textfile
+; 
+
+使用load的方式进行加载数据(load方式加载数据不能体现分桶的结果)
+load data local inpath '/data/students.txt' into table buc1;
+
+分桶表数据的加载
+第一步：要在hive中创建一个临时表，将数据导入临时表中
+第二步：通过对临时表查询的方式完成数据导入，分桶的实现就是对分桶的字段做了hash然后存放到对应的文件中，也就是说向分通表中插入数据的时候
+必然要执行一次MR，这也就是为什么分桶表的数据基本上只能通过从结果集的查询插入方式导入
+
+创建表
+create table if not exists buc2(
+sno int,
+sname string,
+sex string,
+sage int,
+sdept string
+)
+clustered by (sno) sorted by (sage desc) into 4 buckets
+row format delimited 
+fields terminated by ','
+stored as textfile
+; 
+
+加载数据(要注意reduce数量的设置与分桶数量一致) set mapreduce.job.reduces=4;
+insert into table buc2
+select * from t_stu
+cluster by (sno)
+;
+
+现在设置reduce的数量与分桶的数量不一致
+set mapreduce.job.reduces=3;
+
+insert overwrite table buc2
+select * from t_stu
+cluster by (sno)
+;
+实际上数据分了3个桶，与表的设计不相符
+
+解决办法
+set hive.enforce.bucketing=true;（建议开启）
+或者
+设置reduce的数量和分桶数量一致
+虽然开启了强制分桶，reduce数量与分桶数量不一致不影响分桶结果，但是
+会导致效率问题，建议手动设置reduce数量与分桶数量一致
+
+表的设计虽然年龄的排序按照降序排序，这只是一种美好的愿望
+这种的实现还需要写sql的人去实现
+首先保证分桶正确，即要set hive.enforce.bucketing=true;
+或者设置reduce的数量和分桶数量一致
+然后我们可以强制开启排序
+set hive.enforce.sorting=true;
+或者使用其他sql的实现
+
+使用其他sql的实现
+set mapreduce.job.reduces=4;
+创建表
+create table if not exists buc3(
+sno int,
+sname string,
+sex string,
+sage int,
+sdept string
+)
+clustered by (sno) sorted by (sage desc) into 4 buckets
+row format delimited 
+fields terminated by ','
+stored as textfile
+; 
+
+
+加载数据
+insert overwrite table buc3
+select * from t_stu
+distribute by (sno) sort by  (sage desc)
+;
+
+select * from buc3;
+
+
+
+要保证有序，reduce数量必须和分桶数量一致
+可以使用set hive.enforce.sorting=true;
+insert overwrite table buc2
+select * from t_stu
+cluster by (sno)
+;
+这种实现也保证数据是有序的
+
+分桶的查询
+查询全部
+select * from buc3;
+select * from buc3 tablesample(bucket 1 out of 1);
+
+查询第一桶
+select * from buc3 tablesample(bucket 1 out of 4);
+
+select * from buc3 tablesample(bucket 1 out of 2);
+select * from buc3 tablesample(bucket 1 out of 8);
+select * from buc3 tablesample(bucket 1 out of 5);
+
+分桶查询的计算
+不压缩不拉伸
+for 1-4 
+1 2 3 4 
+
+压缩
+1 2 3 4
+
+x：起始位置，s是总桶数（真实存在的），y是压缩后的桶数，n表示取的次数
+x+(s/y)(n-1)
+
+
+拉伸时：
+相当于重新分区，第一桶就是分桶字段的hash值模上总桶数余数为0的数据
+
+查询sno为奇数的数据
+select * from buc3 tablesample (bucket 2 out of 2);
+还可以有条件限制
+select * from buc3 tablesample (bucket 1 out of 2) where sage<20;
+
+注意：tablesample一定要紧跟在表名之后
+select * from buc3 where sage<20 tablesample (bucket 1 out of 2); ##报错
+
+查询前三行数据
+select * from buc3 limit3;
+查询前三行数据
+select * from buc3 tablesample(3 rows);
+
+select * from buc3 tablesample(20 percent);//查询20%的数据
+
+select * from buc3 tablesample(20k);//查询一定大小的数据 B,K,M,G,T,P
+0.8-1.5K，600G，一天会有多少条数据，波峰达到每小时多少数据，波谷每小时多少数据
+
+要求随机抽取三行数据
+select *,rand() from buc3;
+select * from buc3 order by rand() limit 3;
+
+本地模式（hive优化中的一种）
+set hive.exec.mode.local.auto=true;
+设置严格模式（hive优化中的一种）
+分区
+分桶
+
+分桶的总结
+1、定义clustered by(sno) 指定分桶字段 
+sorted by (sage desc) 指定数据的排序字段以及排序规则，
+表示预期的数据就是以这里设置的字段进行排序
+2、导数据clustered by(sno) 指定getpartitioner以哪儿个字段进行hash散列，并且排序的字段也是该字段，排序规则默认是正序排序
+distribute by (sno) 指定以哪儿个字段进行hash散列
+sorted by (sage desc) 指定数据的排序字段以及排序规则
+
+分区下的分桶
+按照性别分区(1男，2女)，在分区中按照学号的奇偶进行分桶
+
+学号 姓名   性别
+1,gyy1,1	  
+2,gyy2,2
+3,gyy3,1
+4,gyy4,2
+5,gyy5,1
+6,gyy6,2
+7,gyy7,1
+8,gyy8,2
+9,gyy9,1
+10,gyy10,1
+11,gyy11,1
+12,gyy12,1
+13,gyy13,2
+14,gyy14,1
+15,gyy15,2
+16,gyy16,1
+17,gyy17,2
+18,gyy18,1
+19,gyy19,1
+
+
+
+create table if not exists dy_buc(
+uid int,
+uname string,
+sex int
+)
+partitioned by (sex int)
+clustered by (uid) into 2 buckets
+row format delimited
+fields terminated by ','
+;
+
+create table if not exists dy_buc(
+uid int,
+uname string
+)
+partitioned by (sex int)
+clustered by (uid) into 2 buckets
+row format delimited
+fields terminated by ','
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

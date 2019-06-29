@@ -1,0 +1,47 @@
+hbase的region拆分策略、
+
+0.94版本之前默认storefile达到10G，region进行拆分
+ConstantSizeRegionSplitPolicy
+
+0.94版本开始
+IncreasingToUpperBoundRegionSplitPolicy
+Min (R^3* "hbase.hregion.memstore.flush.size"*2, "hbase.hregion.max.filesize")
+R为同一个table中region的个数，
+hbase.hregion.memstore.flush.size默认为128M，
+hbase.hregion.max.filesize默认为10G。
+
+
+两种自定义拆分策略
+1、
+KeyPrefixRegionSplitPolicy策略，即根据rowkey指定长度的前缀来划分region
+2、
+DelimitedKeyPrefixRegionSplitPolicy策略：保证以分隔符前面的前缀为splitPoint，保证相同RowKey前缀的数据在一个Region中。
+
+
+minor compact
+storefile达到数量后就进行和并
+只是简单的将文件合并到一起，不做任何的删除更新操作
+合并速度快，效率高
+
+major compact
+设置的定期的合并（压缩）
+会进行数据的更新和删除操作，会耗费大量的磁盘IO
+业务高峰期不会做这种操作
+这种合并都是定期定时的执行
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

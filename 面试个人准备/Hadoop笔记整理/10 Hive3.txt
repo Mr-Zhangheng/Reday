@@ -1,0 +1,740 @@
+一、sql的查询
+1、sql 语句的执行顺序
+from 加载，进行表的查找和加载
+on 关联字段
+join 关联表
+where 过滤
+group by 分组
+having 过滤
+select 查询
+distinct 去重
+order by 排序
+limit 限制输出数量
+
+
+select 
+u.id as uid 
+from 
+user u
+group by 
+uid
+
+2、sql的部分优化
+原则一：分区一定要加
+原则二：多表连接时使用相同的关键词，这样只会产生一个job
+文件a        文件b                   文件c
+person:age   person:age:address     address:class:person
+原则三：减少每个阶段的数据量，只选出需要的，在join表前进行过滤
+select * from a,b where a.uid=b.uid and a.uid > 2000
+select * from a join b on a.uid=b.uid where  a.uid > 2000
+原则四：map端join
+原则五：关联时，大表放在后面，也就是说小表驱动大表
+
+3、sql的查询
+1）sql 中的查询关键字
+select 
+from
+join
+on
+where 
+group by
+having 
+distribute by 
+cluster by 
+sort by/order by 
+limit 
+union/union all
+
+查询原则
+1、尽量不要使用子查询，尽量不使用in或者not in
+2、查询尽量避免join连接查询，但是永远不可能避免
+3、查询永远是小表驱动大表
+
+sql的join操作
+inner join（join）
+left [outer] join 
+right [outer] join 
+full outer join
+hive的专属join：left semi join
+
+a.txt
+1,a     
+2,b
+3,c
+4,d
+7,y
+8,u
+
+b.txt
+2,bb
+3,cc
+7,yy
+9,pp
+
+
+
+
+
+
+create table if not exists a(
+id int,
+name string
+)
+row format delimited 
+fields terminated by ','
+;
+
+load data local inpath '/root/a.txt' into table a;
+
+create table if not exists b(
+id int,
+name string
+)
+row format delimited 
+fields terminated by ','
+;
+
+load data local inpath '/root/b.txt' into table b;
+
+
+hive的join语法仅支持等值连接，不支持非等值的连接
+
+报错
+select * 
+from a
+join 
+b
+on
+a.id>b.id;
+
+z正确
+select * 
+from a
+join 
+b
+on
+a.id=b.id;
+
+正确
+select * from a,b 
+where a.id>b.id;
+
+日志表
+200.13.16.11  。。。。
+200.12.16.11  。。。。
+
+
+ip字典表
+200.13.16.00,200.13.19.255,北京
+200.11.16.00,200.12.19.255,上海
+。。。
+
+200*1000+13*100+16*10+11
+
+left [outer] join
+左表为准，和右表匹配，如果右表匹配不上，则右表数据以NULL代替
+
+select * 
+from a 
+left outer join b
+on a.id=b.id
+;
+
+解决是否存在的问题
+
+select * 
+from a 
+left outer join b
+on a.id=b.id
+where b.id is not NULL
+;
+
+right [outer] join
+右表为准，和左表匹配，如果左表匹配不上，则左表数据以NULL代替
+
+select * 
+from a 
+right outer join b
+on a.id=b.id
+;
+
+
+full outer join 
+左右表的数据全部都显示出来，如果有一方匹配不上，则使用NULL代替
+select * 
+from a 
+full outer join b
+on a.id=b.id
+;
+
+
+left semi join  左半连接
+是left join的一种优化，只能查询左表的数据，然后主要解决hive中数据是否存在的问题
+
+select * 
+from a 
+left semi join b
+on a.id=b.id
+;
+
+select a.*,b.*
+from a 
+left semi join b
+on a.id=b.id
+;
+b表数据只发送了ID进行关联，速度更快
+
+load data local inpath '/root/skim.txt' into table skim;
+load data local inpath '/root/buy.txt' into table buy;
+
+select * from skim where userid in (select userid from buy);
+
+select * from skim left join buy on skim.userid=buy.userid where buy.userid is not NULL; 
+
+select * from skim where exists (select * from buy where skim.userid = buy.userid);
+
+用不开启本地模式的情况下运行上面几条语句。观察运行速度情况
+
+hive不支持right semi join 
+
+join\inner join\多表逗号分隔：内连接，都是相互连接成功才返回结果
+where 的效率最低
+join 不加任何的on 或者where过滤条件中，称为笛卡尔积
+
+
+map-side join
+当有一大一小表的时候，适合用map-side join 。会将小表文件缓存，放在内存中。在map端和内存中的数据进行匹配
+，连接查找关系。hive从1.2.1默认开启map-side join 
+hive.auto.convert.join = true;
+如何知道将多大文件缓存
+hive.mapjoin.smalltable.filesize=25000000（默认配置）
+
+where 后面不能跟聚合函数或者聚合函数的结果，能跟普通的查询或者方法
+
+报错
+select id,
+count(1) as idcount
+from a 
+where count(1)>1
+group by id
+;
+
+正确
+select id,
+count(1) as idcount
+from a 
+where id>1
+group by id
+;
+
+正确
+select id,
+count(1) as idcount
+from a 
+where id>1
+group by id
+having idcount >1 
+;
+
+
+报错，执行顺序的问题
+select id i,
+count(1) as idcount
+from a 
+where id>1
+group by i
+;
+
+count的执行
+count(*)包含了所有的列，相当于行数，在统计结果的时候不会忽略null值
+count(1) 包含了所有的列，用1 代表代码行，在统计结果的时候不会忽略null值
+count(col) 只包括列名那一列，在统计结果的时候会忽略null值，即某个字段为null值时，不统计
+
+执行效率上：
+列名为主键：count(col) 会比count（1）快
+列名不为主键：count(1) 会比count（col）快
+如果表有多个列，并且没有主键，count（1)要比count（*）快，如果有主键count(主键)最快
+如果表里只有一个字段，count（*）最快
+
+group by  分组通常和聚合函数搭配使用使用group by 后查询的字段要么出现在group by后面，要么出现在聚合函数中
+
+select count(1) from  a;
+
+
+having ：对分组后的结果进行过滤，对聚合的结果进行过滤，通常和group by搭配使用
+select id,count(1) as idcount
+from a 
+group by id 
+having count(1) >  1
+;
+
+
+distribute by:会对指定的字段按照hashcode值对reduce数量取模，然后将任务分配到对应的reduce中去执行
+cluster by：distribute by和sort by合用就是cluster by ，但是cluster by不能指定排序，只能是升序 asc /desc(降序)
+sort by：局部排序，只保证单个reduce的数量
+order by： 全局排序，保证所有的reduce内数据有序，如果是全局排序，reduce的数量只能是1个
+在reduce数量为1的时候sort by 和order by一样
+
+设置reduce的个数
+set mapreduce.job.reduces=-1(默认不设置)
+
+limit:从结果集中取固定的条数，限制输出结果
+limit 5;  
+limit 5,20 ##不支持非等值的连接
+
+union ：将两个或者多个查询的结果集合并到一起，去重，排序
+union all：将两个或者多个查询的结果集合并到一起，不去重，不排序
+
+select * from a where id>=1
+union
+select * from a where id<=10
+;
+
+select * from a where id>=1
+union all
+select * from a where id<=10
+;
+
+
+select * from a where id>=1
+union 
+select * from b where id<=10
+;
+
+select * from a where id>=1
+union all
+select * from b where id<=10
+;
+
+使用注意：
+union 和union all 都可以将结果集合并
+但是使用union 和union all必须保证各个select的集合的结果有相同的个数的列，并且每个列的类型是一样的‘
+但列名可以不相同，会将第一个结果的列名作为结果集的列名
+
+select * from a where id>=1
+union all
+select * from buy where userid<=10
+;
+
+创建表
+create table if not exists buy1(
+useId int,
+iteId int,
+tim string
+)
+row format delimited
+fields terminated by ','
+;
+
+load data local inpath '/root/buy.txt' into table buy1;
+
+
+select * from buy where userid>=1
+union all
+select * from buy1 where useid<=10
+;
+
+
+select * from buy1 where useid>=1
+union all
+select * from buy where userid<=10
+;
+
+
+union语句不支持order by \cluster by\distribute by\sort by\limit by
+
+
+错误
+select * from buy where userid>=1 limit 1
+union all
+select * from buy1 where useid<=10 limit 2
+;
+
+错误
+select * from 
+(select * from buy where userid>=1 limit 1
+union all
+select * from buy1 where useid<=10 limit 2
+) tmp
+order by userid;
+;
+
+错误
+select * from buy where userid>=1 
+union all
+select * from buy1 where useid<=10 order by useid
+;
+
+
+正确
+select * from buy where userid>=1 
+union all
+select * from buy1 where useid<=10 order by userid
+;
+
+
+效率低
+select distinct t.sname
+from student t
+join sc
+on sc.sno=t.sno
+;
+
+使用exists 
+
+select distinct t.sname
+from student t
+where exists (select 1 from sc where sc.sno=t.sno)
+;
+
+
+
+左半连接
+select t.sname 
+from student t
+left semi join sc
+on 
+sc.sno=t.sno
+;
+
+
+
+select count(1) from student;
+
+select count(1)
+from sc 
+group by sno 
+;
+
+
+select cname,avg(grade)
+from course,sc
+where sc.cno=1 and sc.cno=course.cno
+group by cname
+;
+
+select cname,avg(grade)
+from course
+join sc
+on sc.cno=course.cno
+where sc.cno=1
+group by cname
+;
+
+hive 的数据类型
+基础数据类型
+tinyint 	1字节（-128，127）
+smallint 	2字节 
+int			4字节
+bigint		8
+double 		8
+float 		4
+blooean 	1
+binary      0.8版本之后才有的
+tiemstamp	0.8版本之后才有的
+
+Java中有的hive中没有的：char ,short,byte ,long 
+
+create table if not exists base(
+id tinyint,
+id1 smallint,
+id2 int,
+id3 bigint,
+salary double,
+salary1 float,
+isok boolean,
+content binary,
+dt timestamp
+)
+row format delimited
+fields terminated by ','
+;
+
+复杂的数据类型
+array
+map
+struct
+
+
+create table if not exists arr1(
+province string,
+city array<string>
+)
+comment 'this is table'
+row format delimited 
+fields terminated by '|'
+tblproperties('author'='laocao','dt'='2019-04-19')
+;
+
+
+
+
+
+create table if not exists arr2(
+province string,
+city array<string>
+)
+comment 'this is table'
+row format delimited 
+fields terminated by '|'
+collection items terminated by ','
+tblproperties('author'='laocao','dt'='2019-04-19')
+;
+
+load data local inpath '/root/array.txt' into table arr2;
+
+select province,city[0] from arr2;
+城市数量大于4的就是一个大省，现在查询有多少大省
+select province,size(city) from arr2 where size(city)>4;
+
+查看某个省下所有城市？
+内嵌查询
+explode(展开)
+
+select explode(city) as scity from arr2;
+
+展开后不知道城市属于哪儿个省，还要和原来的省的字段做关联
+还要拼接原来的省再输出
+
+lateral view:虚拟表
+lateral view 会将explode生成的结果放到一个虚拟表中，然后这个虚拟表会和输入行即每个province进行join,来达到数据聚合的目的
+select province, scity
+from arr2
+lateral view explode(city) city as scity
+;
+
+
+河北    石家庄
+河北    保定
+河北    邯郸
+河北    张家口
+河北    北戴河
+江西    南昌
+江西    九江
+江西    赣州
+江西    鹰潭
+江西    井冈山
+
+需要查询某个城市访问人数，就可以和日志表进行关联，然后统计人数
+
+日志信息
+张三,保定
+李四,石家庄
+王五,石家庄
+赵六,保定
+
+
+create table if not exists buylog(
+name string,
+city string
+)
+row format delimited
+fields terminated by ','
+;
+
+
+
+select tmp.province,tmp.scity
+from 
+(select province, scity
+from arr2
+lateral view explode(city) city as scity
+) tmp
+join buylog
+on tmp.scity=buylog.city
+;
+
+
+select tmp.province,tmp.scity,count(1)
+from 
+(select province, scity
+from arr2
+lateral view explode(city) city as scity
+) tmp
+join buylog
+on tmp.scity=buylog.city
+group by tmp.province,tmp.scity
+;
+
+
+河北    石家庄
+河北    保定
+河北    邯郸
+河北    张家口
+河北    北戴河
+江西    南昌
+江西    九江
+江西    赣州
+江西    鹰潭
+江西    井冈山
+
+上面的数据如何存成数据？
+
+先创建一张临时表把数据 写入临时表中
+create table if not exists arr_tmp
+as 
+select province, scity
+from arr2
+lateral view explode(city) city as scity
+;
+
+将多行数据写入一行，纵向转横向
+select province,collect_set(scity) as city
+from arr_tmp
+group by province
+;
+
+array函数 横向转纵向
+select array("1","2","3")
+
+age=17 age=18  age=19
+
+age 
+17
+18
+19
+
+select array(userid,time) from buy;
+
+
+map  col map<string,int>
+典型的应用场景购物车
+
+购物车
+某蓉|皮鞭:2,蜡烛:1,手铐:1
+宋吉吉|红酒:1,花生米:2,皮皮虾:10
+王强|皮鞭:2,蜡烛:1,手铐:1
+
+create table if not exists map1(
+uname string,
+itemids map<string,int>
+)
+row format delimited
+fields terminated by '\t'
+collection items terminated by ','
+map keys terminated by ':'
+;
+
+
+查询map中某个数据
+select uname,itemids['皮鞭'],itemids['红酒'] from map1;
+
+查询map中元素个数
+select uname,size(itemids) from map1;
+
+某蓉    ["皮鞭","蜡烛","手铐"]  [2,1,1]
+宋吉吉  ["红酒","花生米","皮皮虾"]      [1,2,10]
+王强    ["皮鞭","蜡烛","手铐"]  [2,1,1]
+
+
+
+查询所有的key和value
+select uname,
+map_keys(itemids),
+map_values(itemids)
+from map1;
+
+某蓉,皮鞭:2
+某蓉,蜡烛:1
+某蓉,手铐:1
+宋吉吉,红酒:1
+宋吉吉,花生米:2
+宋吉吉,皮皮虾:10
+王强,皮鞭:2
+
+展开
+select explode(itemids) as (itemName,num) from map1;
+
+使用explode和lateral view 结合查询
+
+select uname,itemName,num from map1 lateral view explode(itemids) ids as itemName,num;
+
+结果
+某蓉    皮鞭    2
+某蓉    蜡烛    1
+某蓉    手铐    1
+宋吉吉  红酒    1
+宋吉吉  花生米  2
+宋吉吉  皮皮虾  10
+王强    皮鞭    2
+王强    蜡烛    1
+王强    手铐    1
+
+
+查询某种商品的销售情况
+select tmp.itemName,sum(tmp.num) totalNum
+from
+(select uname,itemName,num from map1 lateral view explode(itemids) ids as itemName,num
+) tmp
+group by tmp.itemName
+;
+
+
+手铐    2
+皮皮虾  10
+皮鞭    4
+红酒    1
+花生米  2
+蜡烛    2
+
+
+
+销售明细表
+某蓉    皮鞭    2
+某蓉    蜡烛    1
+某蓉    手铐    1
+宋吉吉  红酒    1
+宋吉吉  花生米  2
+宋吉吉  皮皮虾  10
+王强    皮鞭    2
+王强    蜡烛    1
+王强    手铐    1
+
+select uname,itemName,num from map1 lateral view explode(itemids) ids as itemName,num;
+
+
+select str_to_map(text,delimiter1,delimiter2);
+
+
+先创建一个临时表
+create table if not exists map_tmp
+as 
+select uname,itemName,num from map1 lateral view explode(itemids) ids as itemName,num;
+
+
+
+
+1\ 首先将商品和数量组合到一起
+
+select uname,concat(itemName,":",num) from map_tmp;
+
+2\将同一个人的所有商品组合到一起
+select uname,collect_set(concat(itemName,":",num)) from map_tmp
+group by uname;
+
+3\
+["红酒:1","花生米:2","皮皮虾:10"]将这个变成一个字符串，再通过str_to_map根据分隔符将字符串变成map
+
+select str_to_map('皮鞭:2,蜡烛:1,手铐:1,红酒:1,花生米:2,皮皮虾:10',',',':');
+
+select concat_ws(',',collect_set(concat(itemName,":",num))) from map_tmp;
+
+select uname,str_to_map(concat_ws(',',collect_set(concat(itemName,":",num))),',',':') 
+from map_tmp
+group by uname
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+二、数据类型

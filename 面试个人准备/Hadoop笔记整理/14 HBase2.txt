@@ -1,0 +1,178 @@
+准备条件
+JDK、
+SSH免密登录（能够免密登录自己）
+HDFS开启
+zk开启
+时间同步
+
+hbase的安装：
+hbase-env.sh
+1、java_home
+2、zk=false(使用外部的zk)
+hbase-site.xml（如果HDFS是高可用，拷贝core-site.xml,hdfs-site.xml到conf目录下）
+1、hbase存在hdfs上的存储目录一定要配置
+2、zk需要配置
+3、zk产生的数据的存储位置
+4、指定hbase是全分布
+
+配置备用的Hmaster
+backup-masters
+
+配置regionservers
+配置的hregionserver（相当于hdfs中的slaves文件）
+
+start-hbase.sh 
+hbase shell
+
+help 
+help 'command' #命令的帮助
+help 'command_group' #命令组的帮助
+
+list :列出所有表
+
+hbase 没有库的概念，但是有名称空间或者组的概念，就是namespace(相当于mysql中的数据库)
+hbase 默认有两个名称空间
+default
+hbase
+
+
+Group name: namespace
+Commands: alter_namespace, create_namespace, describe_namespace, drop_namespace, list_namespace, list_namespace_tables
+
+list_namespace :列出所有的名称空间
+
+create_namespace 'ns2'
+describe_namespace 'ns2'
+list_namespace_tables 'ns1'
+list_namespace_tables 'ns2'
+drop_namespace 'ns2'(只能删除空的)
+drop_namespace 'ns1'
+
+alter_namespace 'ns1', {METHOD => 'set', 'GP_NAME' => 'GP1919'}
+describe_namespace 'ns1'
+
+alter_namespace 'ns1', {METHOD => 'unset', NAME=>'GP_NAME'}
+describe_namespace 'ns1'
+
+DDL语句
+Group name: ddl
+Commands: alter, alter_async, alter_status, create, describe, disable, disable_all, drop, drop_all, enable, enable_all, exists, get_table, is_disabled, is_enabled, list, locate_region, show_filters
+
+创建表，一定要至少指定一个列族
+create 'ns1:t1', {NAME => 'f1', VERSIONS => 5}
+describe 'ns1:t1'
+create 't1', {NAME => 'f1'}, {NAME => 'f2'}, {NAME => 'f3'}
+describe 't1'
+create 't2', {NAME => 'f1', VERSIONS => 1, TTL => 2592000, BLOCKCACHE => true}
+
+create 't3', {NAME => 'f1', VERSIONS => 1, TTL => 25000, BLOCKCACHE => true}
+
+//事先分配好region所管理的rowkey的范围
+create 'ns1:tt', 'f1', SPLITS => ['10', '20', '30', '40'](预分区)
+
+修改表（有则更新，无则创建）
+alter
+alter 'ns1:t_userinfo','addr_info' //增加一个列族
+alter 't1', 'f1', {NAME => 'f2', IN_MEMORY => true}, {NAME => 'f3', VERSIONS => 5}//修改列族的属性
+
+删除列族
+alter 'ns1:t_userinfo' , NAME => 'addr_info' , METHOD => 'delete' 
+alter 'ns1:t_userinfo' , NAME => 'base_info' , METHOD => 'delete' //必须存在一个列族
+
+删除表：
+disable 't1'
+drop 't1'
+list
+
+
+DML
+Group name: dml
+Commands: append, count, delete, deleteall, get, get_counter, get_splits, incr, put, scan, truncate, truncate_preserve
+插入数据
+put 'ns1:t_userinfo','rk00001','base_info:name','gaoyuanyuan'
+
+alter 'ns1:t_userinfo','addr_info'
+put 'ns1:t_userinfo','rk00001','addr_info:name','gaoyuanyuan'
+put 'ns1:t_userinfo','rk00001','addr_info:age',38
+put 'ns1:t_userinfo','rk00002','addr_info:name','gaofangfang'
+put 'ns1:t_userinfo','rk00003','addr_info:name','gaobianbian'
+put 'ns1:t_userinfo','rk00004','addr_info:name','gaokuangkuang'
+put 'ns1:t_userinfo','rk000010','addr_info:name','gaogaogao'
+
+更新数据
+put 'ns1:t_userinfo','rk00001','addr_info:name','zhaomin'
+put 'ns1:t_userinfo','rk00002','addr_info:name','taozi'
+
+表扫描
+scan 
+scan 'ns1:t_userinfo'
+
+//指定要查询的列族
+scan 'ns1:t_userinfo', {COLUMNS => ['addr_info', 'base_info'], LIMIT => 2, STARTROW => 'rk00002'}
+//设置查询条条件，含头不含尾
+scan 'ns1:t_userinfo', {COLUMNS => ['addr_info', 'base_info'], LIMIT => 10, STARTROW => 'rk00001',ENDROW =>'rk00003'}
+
+查询数据 get (获取某一行的数据)
+get 'ns1:t_userinfo' , 'rk00001'
+
+get 't1', 'r1', {TIMERANGE => [ts1, ts2]} (获取版本数据或者说一定时间范围内的数据)
+
+查询指定的列的数据
+get 't1', 'r1', {COLUMN => ['c1', 'c2', 'c3']}
+
+查询某一列的数据
+get 'ns1:t_userinfo' , 'rk00001',{COLUMN => ['base_info:name'],VERSIONS=>4}
+
+删除数据
+
+delete 'ns1:t_userinfo' , 'rk00001','base_info:name'
+delete 'ns1:t_userinfo' , 'rk00001','base_info:aaaa'
+
+//往上删除版本数据
+delete 'ns1:t_userinfo' , 'rk00001','addr_info:name',TIMESTAMP=>1556090534788
+
+表判断
+exists 
+exists 'ns1:t_userinfo'
+
+disable 'ns1:t_userinfo'
+
+enable 'ns1:t_userinfo'
+
+desc 'ns1:t_userinfo'
+
+统计表(不建议使用)
+count 'ns1:t_userinfo'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
